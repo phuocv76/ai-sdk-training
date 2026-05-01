@@ -1,0 +1,27 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "user-management-app",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2026-05-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "user-management-db",
+			// Replace with your database id from: npx wrangler d1 create user-management-db
+			"database_id": "local-dev-replace-with-your-d1-id"
+		},
+		{
+			"binding": "user_management_db",
+			"database_name": "user-management-db",
+			"database_id": "eb58208d-9063-40e9-8bdf-91ca25920838",
+			"remote": true
+		}
+	]
+}
