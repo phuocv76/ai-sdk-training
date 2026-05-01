@@ -1,8 +1,6 @@
 import { cookies } from "next/headers";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-import type { PrismaClient } from "@/generated/prisma/client";
-
 import { DATABASE_MESSAGES } from "@/constants/messages";
 import { getUserForSession } from "@/lib/sessions";
 import type { User } from "@/lib/users";
@@ -44,10 +42,10 @@ export async function requireDatabase(): Promise<
  * @param prisma Active Prisma client for the current request.
  */
 export async function resolveSessionUser(
-  prisma: PrismaClient,
+  db: D1Database,
 ): Promise<User | null> {
   const jar = await cookies();
   const sid = jar.get(SESSION_COOKIE)?.value;
   if (!sid) return null;
-  return getUserForSession(prisma, sid);
+  return getUserForSession(db, sid);
 }

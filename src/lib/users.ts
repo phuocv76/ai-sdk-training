@@ -1,8 +1,4 @@
-import { Prisma } from "@/generated/prisma/client";
-import type { PrismaClient } from "@/generated/prisma/client";
-
 import { UI_SYMBOLS, USER_DOMAIN_ERRORS } from "@/constants/messages";
-import { UNIQUE_CONSTRAINT_VIOLATION } from "@/constants/prisma-error-codes";
 import { hashPassword } from "@/lib/password";
 
 export type UserRole = "admin" | "member";
@@ -30,6 +26,11 @@ function normalizeRole(role: string): UserRole {
 }
 
 type UserAttrs = Omit<User, "role"> & { role: string };
+
+function isUniqueEmailViolation(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message.toLowerCase().includes("unique");
+}
 
 /**
  * Converts a Prisma user row (with string role) into the app `User` shape.
@@ -112,11 +113,13 @@ function mergeProfileInputs(
  * Lists every user ordered by newest `created_at` first.
  * @param prisma Active Prisma client.
  */
-export async function listUsers(prisma: PrismaClient): Promise<User[]> {
-  const rows = await prisma.user.findMany({
-    orderBy: { created_at: "desc" },
-  });
-  return rows.map((r) => mapPrismaUser(r));
+export async function listUsers(db: D1Database): Promise<User[]> {
+  const rows = (await db
+    .prepare(
+      "SELECT id, name, email, role, created_at, first_name, last_name, date_of_birth, bio FROM users ORDER BY created_at DESC",
+    )
+    .all()) as { results?: UserAttrs[] };
+  return (rows.results ?? []).map((r) => mapPrismaUser(r));
 }
 
 /**
@@ -126,10 +129,15 @@ export async function listUsers(prisma: PrismaClient): Promise<User[]> {
  * @returns The user or `null` when missing.
  */
 export async function getUser(
-  prisma: PrismaClient,
+  db: D1Database,
   id: string,
 ): Promise<User | null> {
-  const row = await prisma.user.findUnique({ where: { id } });
+  const row = (await db
+    .prepare(
+      "SELECT id, name, email, role, created_at, first_name, last_name, date_of_birth, bio FROM users WHERE id = ?1 LIMIT 1",
+    )
+    .bind(id)
+    .first()) as UserAttrs | null;
   return row ? mapPrismaUser(row) : null;
 }
 
@@ -137,8 +145,11 @@ export async function getUser(
  * Counts users whose role is `admin` (bootstrap / first signup).
  * @param prisma Active Prisma client.
  */
-export async function countAdmins(prisma: PrismaClient): Promise<number> {
-  return prisma.user.count({ where: { role: "admin" } });
+export async function countAdmins(db: D1Database): Promise<number> {
+  const row = (await db
+    .prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'")
+    .first()) as { count: number } | null;
+  return Number(row?.count ?? 0);
 }
 
 /**
@@ -147,13 +158,16 @@ export async function countAdmins(prisma: PrismaClient): Promise<number> {
  * @param email Raw email (trimmed/lowercased internally).
  */
 export async function getUserWithSecret(
-  prisma: PrismaClient,
+  db: D1Database,
   email: string,
 ): Promise<(User & { password: string | null }) | null> {
   const emailNorm = email.trim().toLowerCase();
-  const row = await prisma.user.findUnique({
-    where: { email: emailNorm },
-  });
+  const row = (await db
+    .prepare(
+      "SELECT id, name, email, role, created_at, first_name, last_name, date_of_birth, bio, password FROM users WHERE email = ?1 LIMIT 1",
+    )
+    .bind(emailNorm)
+    .first()) as (UserAttrs & { password: string | null }) | null;
   if (!row) return null;
   const { password, ...rest } = row;
   return { ...mapPrismaUser(rest), password };
@@ -166,7 +180,7 @@ export async function getUserWithSecret(
  * @throws When email violates unique constraint.
  */
 export async function createUser(
-  prisma: PrismaClient,
+  db: D1Database,
   input: { name: string; email: string; date_of_birth: string; bio?: string },
 ): Promise<User> {
   const id = crypto.randomUUID();
@@ -181,27 +195,30 @@ export async function createUser(
   const bio = input.bio?.trim();
   const password = await hashPassword(DEFAULT_NEW_USER_PASSWORD);
   try {
-    await prisma.user.create({
-      data: {
+    await db
+      .prepare(
+        "INSERT INTO users (id, name, email, created_at, password, role, first_name, last_name, date_of_birth, bio) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+      )
+      .bind(
         id,
         name,
         email,
         created_at,
         password,
-        role: "member",
+        "member",
         first_name,
         last_name,
         date_of_birth,
-        bio: bio ? bio : null,
-      },
-    });
+        bio ? bio : null,
+      )
+      .run();
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === UNIQUE_CONSTRAINT_VIOLATION) {
+    if (isUniqueEmailViolation(e)) {
       throw new Error(USER_DOMAIN_ERRORS.EMAIL_ALREADY_IN_USE);
     }
     throw e;
   }
-  const u = await getUser(prisma, id);
+  const u = await getUser(db, id);
   if (!u) throw new Error(USER_DOMAIN_ERRORS.FAILED_TO_READ_CREATED_USER);
   return u;
 }
@@ -213,7 +230,7 @@ export async function createUser(
  * @throws On unique email conflict.
  */
 export async function registerUserAccount(
-  prisma: PrismaClient,
+  db: D1Database,
   input: {
     name: string;
     email: string;
@@ -230,28 +247,29 @@ export async function registerUserAccount(
     parts.length > 1 ? parts.slice(1).join(" ") : null;
 
   try {
-    await prisma.user.create({
-      data: {
+    await db
+      .prepare(
+        "INSERT INTO users (id, name, email, created_at, password, role, first_name, last_name, date_of_birth, bio) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL)",
+      )
+      .bind(
         id,
-        name: input.name.trim(),
+        input.name.trim(),
         email,
         created_at,
-        password: input.password,
-        role: input.role,
+        input.password,
+        input.role,
         first_name,
         last_name,
-        date_of_birth: null,
-        bio: null,
-      },
-    });
+      )
+      .run();
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === UNIQUE_CONSTRAINT_VIOLATION) {
+    if (isUniqueEmailViolation(e)) {
       throw new Error(USER_DOMAIN_ERRORS.EMAIL_ALREADY_REGISTERED);
     }
     throw e;
   }
 
-  const u = await getUser(prisma, id);
+  const u = await getUser(db, id);
   if (!u) throw new Error(USER_DOMAIN_ERRORS.FAILED_TO_READ_REGISTERED_USER);
   return u;
 }
@@ -264,7 +282,7 @@ export async function registerUserAccount(
  * @throws On unique email conflict.
  */
 export async function updateUser(
-  prisma: PrismaClient,
+  db: D1Database,
   input: {
     id: string;
     name?: string;
@@ -275,7 +293,7 @@ export async function updateUser(
     bio?: string | null;
   },
 ): Promise<User | null> {
-  const existing = await getUser(prisma, input.id);
+  const existing = await getUser(db, input.id);
   if (!existing) return null;
   const name = input.name ?? existing.name;
   const email = (input.email ?? existing.email).trim().toLowerCase();
@@ -284,17 +302,19 @@ export async function updateUser(
     existing,
   );
   try {
-    await prisma.user.update({
-      where: { id: input.id },
-      data: { name, email, first_name, last_name, date_of_birth, bio },
-    });
+    await db
+      .prepare(
+        "UPDATE users SET name = ?1, email = ?2, first_name = ?3, last_name = ?4, date_of_birth = ?5, bio = ?6 WHERE id = ?7",
+      )
+      .bind(name, email, first_name, last_name, date_of_birth, bio, input.id)
+      .run();
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === UNIQUE_CONSTRAINT_VIOLATION) {
+    if (isUniqueEmailViolation(e)) {
       throw new Error(USER_DOMAIN_ERRORS.EMAIL_ALREADY_IN_USE);
     }
     throw e;
   }
-  return getUser(prisma, input.id);
+  return getUser(db, input.id);
 }
 
 /**
@@ -304,7 +324,7 @@ export async function updateUser(
  * @param input Partial profile fields.
  */
 export async function updateMemberProfile(
-  prisma: PrismaClient,
+  db: D1Database,
   userId: string,
   input: {
     first_name?: string | null;
@@ -313,9 +333,9 @@ export async function updateMemberProfile(
     bio?: string | null;
   },
 ): Promise<User | null> {
-  const existing = await getUser(prisma, userId);
+  const existing = await getUser(db, userId);
   if (!existing) return null;
-  return updateUser(prisma, { id: userId, ...input });
+  return updateUser(db, { id: userId, ...input });
 }
 
 /**
@@ -325,11 +345,11 @@ export async function updateMemberProfile(
  * @returns Whether any row was removed.
  */
 export async function deleteUser(
-  prisma: PrismaClient,
+  db: D1Database,
   id: string,
 ): Promise<{ deleted: boolean }> {
-  const res = await prisma.user.deleteMany({ where: { id } });
-  return { deleted: res.count > 0 };
+  const result = await db.prepare("DELETE FROM users WHERE id = ?1").bind(id).run();
+  return { deleted: Number(result.meta.changes ?? 0) > 0 };
 }
 
 /**

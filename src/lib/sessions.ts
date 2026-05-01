@@ -1,5 +1,3 @@
-import type { PrismaClient } from "@/generated/prisma/client";
-
 import type { User } from "@/lib/users";
 import { getUser } from "@/lib/users";
 
@@ -12,15 +10,16 @@ const WEEK_SEC = 60 * 60 * 24 * 7;
  * @param ttlSeconds Session lifetime in seconds (default one week).
  */
 export async function createSession(
-  prisma: PrismaClient,
+  db: D1Database,
   userId: string,
   ttlSeconds: number = WEEK_SEC,
 ): Promise<string> {
   const id = crypto.randomUUID();
   const expires_at = Date.now() + ttlSeconds * 1000;
-  await prisma.session.create({
-    data: { id, user_id: userId, expires_at },
-  });
+  await db
+    .prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES (?1, ?2, ?3)")
+    .bind(id, userId, expires_at)
+    .run();
   return id;
 }
 
@@ -30,16 +29,18 @@ export async function createSession(
  * @param sessionId Session id from the cookie.
  */
 export async function getUserForSession(
-  prisma: PrismaClient,
+  db: D1Database,
   sessionId: string,
 ): Promise<User | null> {
   const now = Date.now();
-  const session = await prisma.session.findFirst({
-    where: { id: sessionId, expires_at: { gt: now } },
-    select: { user_id: true },
-  });
+  const session = (await db
+    .prepare(
+      "SELECT user_id FROM sessions WHERE id = ?1 AND expires_at > ?2 LIMIT 1",
+    )
+    .bind(sessionId, now)
+    .first()) as { user_id: string } | null;
   if (!session) return null;
-  return getUser(prisma, session.user_id);
+  return getUser(db, session.user_id);
 }
 
 /**
@@ -48,8 +49,8 @@ export async function getUserForSession(
  * @param sessionId Session id to revoke.
  */
 export async function deleteSession(
-  prisma: PrismaClient,
+  db: D1Database,
   sessionId: string,
 ) {
-  await prisma.session.deleteMany({ where: { id: sessionId } });
+  await db.prepare("DELETE FROM sessions WHERE id = ?1").bind(sessionId).run();
 }
