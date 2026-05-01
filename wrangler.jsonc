@@ -6,16 +6,26 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	"observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": true,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  },
 	"assets": {
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
 	},
 	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "user-management-db",
-			"database_id": "eb58208d-9063-40e9-8bdf-91ca25920838"
-		},
 		{
 			"binding": "user_management_db",
 			"database_name": "user-management-db",
