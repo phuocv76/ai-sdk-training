@@ -78,9 +78,9 @@ export function ProfileFieldsDisplay({
       <Field label={PROFILE_UI_MESSAGES.LEGACY_NAME_LABEL}>{user.name}</Field>
       <Field label={PROFILE_UI_MESSAGES.ROLE_LABEL}>
         <span
-          className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold uppercase ${user.role === "admin"
-              ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
-              : "text-[var(--dash-muted)]"
+          className={`text-sm font-semibold uppercase ${user.role === "admin"
+              ? "text-violet-700 dark:text-violet-300"
+              : "text-[var(--foreground)]"
             }`}
         >
           {user.role === "admin" ?

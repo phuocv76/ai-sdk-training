@@ -1,13 +1,9 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import {
-  DefaultChatTransport,
-  getToolName,
-  isTextUIPart,
-  isToolUIPart,
-} from "ai";
+import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AssistantChatPopup } from "@/components/assistant-chat-popup";
 
 import { useAuth } from "@/components/auth-session-provider";
 import { useOpenAiApiKey } from "@/components/openai-api-key-context";
@@ -485,154 +481,19 @@ export function UserDashboard() {
           </section>
         : null}
 
-        <section
-          id="ai-assistant"
-          className={`flex min-h-[480px] flex-col rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-card)] shadow-sm xl:min-h-[620px] ${isAdmin ? "xl:col-span-3" : "xl:col-span-5"}`}
-        >
-          <header className="border-b border-[var(--dash-border)] p-5">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--dash-accent-soft)]">
-                <svg
-                  className="h-5 w-5 text-[var(--dash-accent)]"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight">
-                  {isAdmin ?
-                    DASHBOARD_MESSAGES.DIRECTORY_ASSISTANT_TITLE
-                  : DASHBOARD_MESSAGES.PROFILE_ASSISTANT_TITLE}
-                </h2>
-              </div>
-            </div>
-          </header>
-
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[var(--background)]/50 p-5">
-            {messages.length === 0 ?
-              <div className="rounded-xl border border-dashed border-[var(--dash-border)] bg-[var(--dash-card)] p-6 text-center">
-                <p className="text-sm text-[var(--dash-muted)]">{chatHint}</p>
-              </div>
-            : null}
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`max-w-[95%] rounded-2xl px-4 py-3 text-sm shadow-sm ${m.role === "user"
-                    ? "ml-auto border border-[var(--dash-accent)]/25 bg-[var(--dash-accent-soft)] text-[var(--foreground)]"
-                    : "mr-auto border border-[var(--dash-border)] bg-[var(--dash-card)] text-[var(--foreground)]"
-                  }`}
-              >
-                <div className="mb-2 flex items-center gap-2">
-                  <span
-                    className={
-                      m.role === "user" ?
-                        "text-[11px] font-semibold tracking-wide text-[var(--dash-accent)]"
-                      : "text-[11px] font-bold uppercase tracking-wider text-[var(--dash-muted)]"
-                    }
-                    title={
-                      m.role === "user" && currentUser?.email ?
-                        currentUser.email
-                      : undefined
-                    }
-                  >
-                    {m.role === "user" ?
-                      (currentUser ? displayName(currentUser) : DASHBOARD_MESSAGES.LABEL_YOU)
-                    : DASHBOARD_MESSAGES.LABEL_ASSISTANT}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {m.parts.map((part, i) => {
-                    if (isTextUIPart(part)) {
-                      return (
-                        <p
-                          key={i}
-                          className="whitespace-pre-wrap leading-relaxed"
-                        >
-                          {part.text}
-                        </p>
-                      );
-                    }
-                    if (isToolUIPart(part)) {
-                      const title = getToolName(part);
-                      return (
-                        <div
-                          key={i}
-                          className="rounded-xl border border-[var(--dash-border)] bg-[var(--background)] px-3 py-2 font-mono text-[11px] text-[var(--foreground)]"
-                        >
-                          <div className="font-semibold text-[var(--dash-muted)]">
-                            {title}{" "}
-                            <span className="font-normal opacity-70">
-                              ({part.state})
-                            </span>
-                          </div>
-                          {"input" in part && part.input != null ?
-                            <pre className="mt-2 max-h-40 overflow-auto text-[var(--foreground)]">
-                              {JSON.stringify(part.input, null, 2)}
-                            </pre>
-                          : null}
-                          {"output" in part && part.output !== undefined ?
-                            <pre className="mt-2 max-h-48 overflow-auto text-[var(--foreground)]">
-                              {JSON.stringify(part.output, null, 2)}
-                            </pre>
-                          : null}
-                        </div>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {error ?
-            <p className="px-5 text-sm text-red-600 dark:text-red-400">
-              {error.message}
-            </p>
-          : null}
-
-          {!isAdmin ?
-            <p className="border-b border-[var(--dash-border)] bg-emerald-500/[0.08] px-5 py-3 text-xs text-emerald-950 dark:text-emerald-200/95">
-              {DASHBOARD_MESSAGES.MEMBER_BANNER}
-            </p>
-          : null}
-
-          <form
-            onSubmit={(e) => void onSubmit(e)}
-            className="border-t border-[var(--dash-border)] bg-[var(--dash-card)] p-4"
-          >
-            <div className="flex items-center gap-2">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={
-                  isAdmin ?
-                    DASHBOARD_MESSAGES.PLACEHOLDER_ADMIN_INPUT
-                  : DASHBOARD_MESSAGES.PLACEHOLDER_MEMBER_INPUT
-                }
-                rows={2}
-                disabled={busy}
-                className="min-h-[48px] flex-1 resize-none rounded-xl border border-[var(--dash-border)] bg-[var(--background)] px-3 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--dash-muted)] focus:border-[var(--dash-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/20 disabled:opacity-60"
-              />
-              <button
-                type="submit"
-                disabled={busy || !input.trim()}
-                className="shrink-0 rounded-xl bg-[var(--dash-accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-900/20 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                {busy ? DASHBOARD_MESSAGES.SEND_BUSY : DASHBOARD_MESSAGES.SEND}
-              </button>
-            </div>
-          </form>
-        </section>
       </div>
+
+      <AssistantChatPopup
+        isAdmin={isAdmin}
+        currentUser={currentUser ?? null}
+        messages={messages}
+        chatHint={chatHint}
+        busy={busy}
+        errorMessage={error?.message}
+        input={input}
+        setInput={setInput}
+        onSubmit={onSubmit}
+      />
     </div>
   );
 }

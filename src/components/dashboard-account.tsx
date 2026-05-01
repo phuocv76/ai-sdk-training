@@ -29,16 +29,21 @@ export function DashboardAccountSummary() {
       <p className="mt-0.5 truncate text-[11px] text-indigo-200/85">
         {user.email}
       </p>
-      <span
-        className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${user.role === "admin"
-            ? "bg-emerald-400/20 text-emerald-200"
-            : "bg-white/10 text-indigo-100/90"
-          }`}
-      >
-        {user.role === "admin" ?
-          ACCOUNT_MESSAGES.ROLE_ADMIN
-        : ACCOUNT_MESSAGES.ROLE_MEMBER}
-      </span>
+      <div className="mt-2 flex items-center gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-indigo-200/85">
+          Role
+        </span>
+        <span
+          className={`inline-flex rounded-full py-0.5 text-[10px] font-bold uppercase tracking-wide ${user.role === "admin"
+              ? "bg-emerald-400/20 text-emerald-200"
+              : "bg-white/10 text-indigo-100/90"
+            }`}
+        >
+          {user.role === "admin" ?
+            ACCOUNT_MESSAGES.ROLE_ADMIN
+          : ACCOUNT_MESSAGES.ROLE_MEMBER}
+        </span>
+      </div>
     </div>
   );
 }

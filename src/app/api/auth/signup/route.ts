@@ -59,7 +59,7 @@ export async function POST(req: Request) {
       const user = await registerUserAccount(prisma, {
         name,
         email,
-        password_hash: pw,
+        password: pw,
         role,
       });
 

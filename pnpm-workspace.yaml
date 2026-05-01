@@ -1,0 +1,12 @@
+ignoredBuiltDependencies:
+  - '@prisma/engines'
+  - '@scarf/scarf'
+  - '@tree-sitter-grammars/tree-sitter-yaml'
+  - core-js-pure
+  - esbuild
+  - prisma
+  - sharp
+  - tree-sitter
+  - tree-sitter-json
+  - unrs-resolver
+  - workerd

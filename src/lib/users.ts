@@ -3,8 +3,10 @@ import type { PrismaClient } from "@/generated/prisma/client";
 
 import { UI_SYMBOLS, USER_DOMAIN_ERRORS } from "@/constants/messages";
 import { UNIQUE_CONSTRAINT_VIOLATION } from "@/constants/prisma-error-codes";
+import { hashPassword } from "@/lib/password";
 
 export type UserRole = "admin" | "member";
+const DEFAULT_NEW_USER_PASSWORD = "Abcd@123";
 
 export type User = {
   id: string;
@@ -140,37 +142,44 @@ export async function countAdmins(prisma: PrismaClient): Promise<number> {
 }
 
 /**
- * Finds a user by normalized email including `password_hash` for login.
+ * Finds a user by normalized email including `password` for login.
  * @param prisma Active Prisma client.
  * @param email Raw email (trimmed/lowercased internally).
  */
 export async function getUserWithSecret(
   prisma: PrismaClient,
   email: string,
-): Promise<(User & { password_hash: string | null }) | null> {
+): Promise<(User & { password: string | null }) | null> {
   const emailNorm = email.trim().toLowerCase();
   const row = await prisma.user.findUnique({
     where: { email: emailNorm },
   });
   if (!row) return null;
-  const { password_hash, ...rest } = row;
-  return { ...mapPrismaUser(rest), password_hash };
+  const { password, ...rest } = row;
+  return { ...mapPrismaUser(rest), password };
 }
 
 /**
- * Creates a directory-only user (no password) with default member role.
+ * Creates a member user with a default password and profile fields.
  * @param prisma Active Prisma client.
  * @param input Display name and unique email.
  * @throws When email violates unique constraint.
  */
 export async function createUser(
   prisma: PrismaClient,
-  input: { name: string; email: string },
+  input: { name: string; email: string; date_of_birth: string; bio?: string },
 ): Promise<User> {
   const id = crypto.randomUUID();
   const created_at = Date.now();
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
+  const parts = name.split(/\s+/).filter(Boolean);
+  const first_name = parts[0] ?? null;
+  const last_name =
+    parts.length > 1 ? parts.slice(1).join(" ") : null;
+  const date_of_birth = input.date_of_birth.trim();
+  const bio = input.bio?.trim();
+  const password = await hashPassword(DEFAULT_NEW_USER_PASSWORD);
   try {
     await prisma.user.create({
       data: {
@@ -178,12 +187,12 @@ export async function createUser(
         name,
         email,
         created_at,
-        password_hash: null,
+        password,
         role: "member",
-        first_name: null,
-        last_name: null,
-        date_of_birth: null,
-        bio: null,
+        first_name,
+        last_name,
+        date_of_birth,
+        bio: bio ? bio : null,
       },
     });
   } catch (e) {
@@ -208,7 +217,7 @@ export async function registerUserAccount(
   input: {
     name: string;
     email: string;
-    password_hash: string;
+    password: string;
     role: UserRole;
   },
 ): Promise<User> {
@@ -227,7 +236,7 @@ export async function registerUserAccount(
         name: input.name.trim(),
         email,
         created_at,
-        password_hash: input.password_hash,
+        password: input.password,
         role: input.role,
         first_name,
         last_name,

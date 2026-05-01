@@ -34,6 +34,65 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const USER_MANAGEMENT_TOPICS = [
+  "user",
+  "users",
+  "profile",
+  "account",
+  "accounts",
+  "admin",
+  "member",
+  "role",
+  "roles",
+  "directory",
+  "name",
+  "email",
+  "password",
+  "date of birth",
+  "dob",
+  "bio",
+  "signup",
+  "sign up",
+  "login",
+  "sign in",
+  "create",
+  "update",
+  "delete",
+  "list",
+] as const;
+
+function latestUserText(messages: UIMessage[] | undefined): string {
+  if (!messages?.length) return "";
+
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const msg = messages[i];
+    if (msg.role !== "user") continue;
+
+    const textParts = msg.parts
+      .filter(
+        (
+          part,
+        ): part is {
+          type: "text";
+          text: string;
+        } => part.type === "text" && typeof part.text === "string",
+      )
+      .map((part) => part.text.trim())
+      .filter(Boolean);
+
+    const text = textParts.join(" ").trim();
+    if (text) return text;
+  }
+
+  return "";
+}
+
+function isUserManagementRelated(input: string): boolean {
+  const normalized = input.toLowerCase();
+  if (!normalized) return true;
+  return USER_MANAGEMENT_TOPICS.some((topic) => normalized.includes(topic));
+}
+
 const dobField = z
   .union([
     z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -88,6 +147,22 @@ export async function POST(req: Request) {
   }
 
   const openai = createOpenAI({ apiKey });
+  const latestText = latestUserText(body.messages);
+  if (!isUserManagementRelated(latestText)) {
+    const offTopicResult = streamText({
+      model: openai("gpt-4o-mini"),
+      system:
+        "You are a strict user-management assistant. Reply with exactly the provided message and nothing else.",
+      messages: [
+        {
+          role: "user",
+          content: API_MESSAGES.CHAT_OFF_TOPIC,
+        },
+      ],
+    });
+    return offTopicResult.toUIMessageStreamResponse();
+  }
+
   const modelMessages = await convertToModelMessages(body.messages);
 
   const memberTools =
@@ -175,6 +250,8 @@ export async function POST(req: Request) {
         inputSchema: z.object({
           name: z.string().min(1),
           email: z.string().email(),
+          date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          bio: z.string().max(8000).optional(),
         }),
         execute: async (input) => {
           try {

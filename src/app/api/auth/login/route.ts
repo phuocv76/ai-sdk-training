@@ -49,29 +49,34 @@ export async function POST(req: Request) {
       );
     }
 
-    const { email, password } = parsed.data;
-    const row = await getUserWithSecret(prisma, email);
-    const ok =
-      row &&
-      row.password_hash &&
-      (await verifyPassword(password, row.password_hash));
-    if (!ok) {
+    try {
+      const { email, password } = parsed.data;
+      const row = await getUserWithSecret(prisma, email);
+      const ok =
+        row && row.password && (await verifyPassword(password, row.password));
+      if (!ok) {
+        return NextResponse.json(
+          { error: API_MESSAGES.INVALID_CREDENTIALS },
+          { status: 401 },
+        );
+      }
+
+      const sessionId = await createSession(prisma, row.id);
+      const { password: _p, ...u } = row;
+      const res = NextResponse.json({
+        ok: true,
+        user: userResponseBody(u),
+      });
+      res.cookies.set(SESSION_COOKIE, sessionId, {
+        ...SESSION_COOKIE_SETTINGS,
+        maxAge: SESSION_MAX_AGE_SEC,
+      });
+      return res;
+    } catch {
       return NextResponse.json(
         { error: API_MESSAGES.INVALID_CREDENTIALS },
         { status: 401 },
       );
     }
-
-    const sessionId = await createSession(prisma, row.id);
-    const { password_hash: _p, ...u } = row;
-    const res = NextResponse.json({
-      ok: true,
-      user: userResponseBody(u),
-    });
-    res.cookies.set(SESSION_COOKIE, sessionId, {
-      ...SESSION_COOKIE_SETTINGS,
-      maxAge: SESSION_MAX_AGE_SEC,
-    });
-    return res;
   });
 }

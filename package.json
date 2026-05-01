@@ -12,8 +12,8 @@
     "cf-typegen": "wrangler types cloudflare-env.d.ts",
     "db:apply:local": "wrangler d1 migrations apply user-management-db --local",
     "db:apply:remote": "wrangler d1 migrations apply user-management-db --remote",
-    "db:generate": "prisma generate",
-    "postinstall": "prisma generate"
+    "db:generate": "NODE_OPTIONS=--experimental-require-module prisma generate",
+    "postinstall": "NODE_OPTIONS=--experimental-require-module prisma generate"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.55",
@@ -24,7 +24,7 @@
     "next": "16.2.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "swagger-ui-react": "^5.32.5",
+    "swagger-ui-dist": "^5.32.5",
     "zod": "^4.4.1"
   },
   "devDependencies": {
@@ -34,7 +34,6 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/swagger-ui-react": "^5.18.0",
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
@@ -42,5 +41,10 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "wrangler": "^4.87.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@prisma/dev": "0.24.7"
+    }
   }
 }

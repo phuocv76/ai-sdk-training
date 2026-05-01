@@ -18,6 +18,8 @@ export const API_MESSAGES = {
   INVALID_JSON_BODY: "Invalid JSON body",
   MISSING_OPENAI_API_KEY:
     "Missing OPENAI_API_KEY. Add it to .dev.vars / wrangler secrets / .env.local.",
+  CHAT_OFF_TOPIC:
+    "I can only help with user management tasks like profiles, users, roles, and account updates.",
 } as const;
 
 /** D1 / infrastructure errors from `requireDatabase`. */
@@ -216,7 +218,7 @@ export const CHAT_TOOL_MESSAGES = {
   GET_USER: "Fetch one user by id (includes profile columns).",
   USER_ID_PARAM: "User id (UUID)",
   CREATE_USER:
-    "Create a directory user with unique email (no portal password)",
+    "Create a directory user with unique email, full name, and date of birth (YYYY-MM-DD); bio is optional. Default password is Abcd@123.",
   UPDATE_USER:
     "Update identity, profile, or both for any user by id (omit unchanged fields)",
   DELETE_USER: "Delete a user by id.",
@@ -228,8 +230,12 @@ export const CHAT_SYSTEM_PROMPTS = {
 first_name, last_name, date_of_birth (YYYY-MM-DD), bio, plus legacy name/email/role.
 
 Rules:
+- Only answer requests related to user management (users, profiles, accounts, roles, authentication, directory data).
+- If a request is off-topic, reply with: "I can only help with user management tasks like profiles, users, roles, and account updates."
 - After each successful tool call, briefly confirm ids and updated fields (including profile when relevant).
 - For updates only pass fields that change; omit others.
+- For createUser, collect required fields first: email, full name, and date_of_birth (YYYY-MM-DD). Ask follow-up questions if anything is missing. Bio is optional.
+- Do not call createUser until all required fields are provided and unambiguous.
 - Handle unique email collisions clearly.`,
 } as const;
 
@@ -240,6 +246,8 @@ Rules:
 export function chatMemberSystemPrompt(memberName: string): string {
   return `You help the signed-in member (${memberName}) with their OWN profile via getMyProfile and updateMyProfile.
 They cannot list everyone or change others. Field rules:
+- Only answer requests related to user management (users, profiles, accounts, roles, authentication, directory data).
+- If a request is off-topic, reply with: "I can only help with user management tasks like profiles, users, roles, and account updates."
 - first_name, last_name, bio optional strings; omit if unchanged.
 - date_of_birth as YYYY-MM-DD or omit; empty/null clears DOB where supported.
 Invite natural language (“set my bio to”) and translate to explicit tool inputs.`;
