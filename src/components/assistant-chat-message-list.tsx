@@ -18,6 +18,12 @@ type AssistantChatMessageListProps = {
   currentUser: User | null;
 };
 
+type UIPart = Parameters<typeof isTextUIPart>[0];
+
+function isUIPart(part: unknown): part is UIPart {
+  return typeof part === "object" && part !== null && "type" in part;
+}
+
 export function AssistantChatMessageList({
   messages,
   chatHint,
@@ -61,6 +67,10 @@ export function AssistantChatMessageList({
           </div>
           <div className="space-y-2">
             {m.parts.map((part, i) => {
+              if (!isUIPart(part)) {
+                return null;
+              }
+
               if (isTextUIPart(part)) {
                 return (
                   <p key={i} className="whitespace-pre-wrap leading-relaxed">
