@@ -183,12 +183,9 @@ export const DASHBOARD_MESSAGES = {
 
 /** User profile drawer and field labels. */
 export const PROFILE_UI_MESSAGES = {
-  DISPLAY_NAME_LABEL: "Display name",
+  NAME_LABEL: "Name",
   EMAIL_LABEL: "Email",
-  FIRST_NAME_LABEL: "First name",
-  LAST_NAME_LABEL: "Last name",
   DATE_OF_BIRTH_LABEL: "Date of birth",
-  LEGACY_NAME_LABEL: "Legacy name (account)",
   ROLE_LABEL: "Role",
   JOINED_LABEL: "Joined",
   BIO_LABEL: "Bio",
@@ -210,7 +207,7 @@ export const APP_METADATA_MESSAGES = {
 /** Vercel AI tool descriptions (`chat` route). */
 export const CHAT_TOOL_MESSAGES = {
   GET_MY_PROFILE:
-    "Load the signed-in user's full profile record (directory fields plus first name, last name, DOB YYYY-MM-DD, bio).",
+    "Load the signed-in user's full profile record (name, DOB YYYY-MM-DD, bio).",
   UPDATE_MY_PROFILE:
     "Update ONLY the signed-in user's profile fields. Omit unchanged fields. Empty string clears a field. Date of birth as YYYY-MM-DD.",
   LIST_USERS:
@@ -227,7 +224,7 @@ export const CHAT_TOOL_MESSAGES = {
 /** `streamText` system prompts for admins vs members. */
 export const CHAT_SYSTEM_PROMPTS = {
   ADMIN: `You are the assistant for an internal user directory. Profiles live on the users table:
-first_name, last_name, date_of_birth (YYYY-MM-DD), bio, plus legacy name/email/role.
+name, date_of_birth (YYYY-MM-DD), bio, plus email/role.
 
 Rules:
 - Only answer requests related to user management (users, profiles, accounts, roles, authentication, directory data).
@@ -248,7 +245,7 @@ export function chatMemberSystemPrompt(memberName: string): string {
 They cannot list everyone or change others. Field rules:
 - Only answer requests related to user management (users, profiles, accounts, roles, authentication, directory data).
 - If a request is off-topic, reply with: "I can only help with user management tasks like profiles, users, roles, and account updates."
-- first_name, last_name, bio optional strings; omit if unchanged.
+- name, bio optional strings; omit if unchanged.
 - date_of_birth as YYYY-MM-DD or omit; empty/null clears DOB where supported.
 Invite natural language (“set my bio to”) and translate to explicit tool inputs.`;
 }

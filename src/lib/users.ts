@@ -10,8 +10,6 @@ export type User = {
   email: string;
   role: UserRole;
   created_at: number;
-  first_name: string | null;
-  last_name: string | null;
   date_of_birth: string | null;
   bio: string | null;
 };
@@ -43,25 +41,18 @@ function mapPrismaUser(row: UserAttrs): User {
     email: row.email,
     role: normalizeRole(row.role),
     created_at: row.created_at,
-    first_name: row.first_name ?? null,
-    last_name: row.last_name ?? null,
     date_of_birth: row.date_of_birth ?? null,
     bio: row.bio ?? null,
   };
 }
 
 /**
- * Display name prefers first + last name, then legacy `name`.
- * @param user Subset of user with name fields.
- * @returns Combined given name or `"?"` when all are blank.
+ * Display name from canonical `name`, or a placeholder when blank.
+ * @param user Subset with `name`.
  */
-export function displayName(
-  user: Pick<User, "first_name" | "last_name" | "name">,
-): string {
-  const a = (user.first_name ?? "").trim();
-  const b = (user.last_name ?? "").trim();
-  const combined = `${a} ${b}`.trim();
-  return combined || user.name.trim() || UI_SYMBOLS.UNKNOWN_INITIAL;
+export function displayName(user: Pick<User, "name">): string {
+  const n = user.name.trim();
+  return n || UI_SYMBOLS.UNKNOWN_INITIAL;
 }
 
 /**
@@ -86,21 +77,15 @@ function normalizeProfileString(
  */
 function mergeProfileInputs(
   input: {
-    first_name?: string | null;
-    last_name?: string | null;
     date_of_birth?: string | null;
     bio?: string | null;
   },
   existing: User,
 ): {
-  first_name: string | null;
-  last_name: string | null;
   date_of_birth: string | null;
   bio: string | null;
 } {
   return {
-    first_name: normalizeProfileString(input.first_name, existing.first_name),
-    last_name: normalizeProfileString(input.last_name, existing.last_name),
     date_of_birth: normalizeProfileString(
       input.date_of_birth,
       existing.date_of_birth,
@@ -116,7 +101,7 @@ function mergeProfileInputs(
 export async function listUsers(db: D1Database): Promise<User[]> {
   const rows = (await db
     .prepare(
-      "SELECT id, name, email, role, created_at, first_name, last_name, date_of_birth, bio FROM users ORDER BY created_at DESC",
+      "SELECT id, name, email, role, created_at, date_of_birth, bio FROM users ORDER BY created_at DESC",
     )
     .all()) as { results?: UserAttrs[] };
   return (rows.results ?? []).map((r) => mapPrismaUser(r));
@@ -134,7 +119,7 @@ export async function getUser(
 ): Promise<User | null> {
   const row = (await db
     .prepare(
-      "SELECT id, name, email, role, created_at, first_name, last_name, date_of_birth, bio FROM users WHERE id = ?1 LIMIT 1",
+      "SELECT id, name, email, role, created_at, date_of_birth, bio FROM users WHERE id = ?1 LIMIT 1",
     )
     .bind(id)
     .first()) as UserAttrs | null;
@@ -164,7 +149,7 @@ export async function getUserWithSecret(
   const emailNorm = email.trim().toLowerCase();
   const row = (await db
     .prepare(
-      "SELECT id, name, email, role, created_at, first_name, last_name, date_of_birth, bio, password FROM users WHERE email = ?1 LIMIT 1",
+      "SELECT id, name, email, role, created_at, date_of_birth, bio, password FROM users WHERE email = ?1 LIMIT 1",
     )
     .bind(emailNorm)
     .first()) as (UserAttrs & { password: string | null }) | null;
@@ -187,17 +172,13 @@ export async function createUser(
   const created_at = Date.now();
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
-  const parts = name.split(/\s+/).filter(Boolean);
-  const first_name = parts[0] ?? null;
-  const last_name =
-    parts.length > 1 ? parts.slice(1).join(" ") : null;
   const date_of_birth = input.date_of_birth.trim();
   const bio = input.bio?.trim();
   const password = await hashPassword(DEFAULT_NEW_USER_PASSWORD);
   try {
     await db
       .prepare(
-        "INSERT INTO users (id, name, email, created_at, password, role, first_name, last_name, date_of_birth, bio) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        "INSERT INTO users (id, name, email, created_at, password, role, date_of_birth, bio) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
       )
       .bind(
         id,
@@ -206,8 +187,6 @@ export async function createUser(
         created_at,
         password,
         "member",
-        first_name,
-        last_name,
         date_of_birth,
         bio ? bio : null,
       )
@@ -240,27 +219,15 @@ export async function registerUserAccount(
 ): Promise<User> {
   const id = crypto.randomUUID();
   const created_at = Date.now();
+  const resolvedName = input.name.trim();
   const email = input.email.trim().toLowerCase();
-  const parts = input.name.trim().split(/\s+/).filter(Boolean);
-  const first_name = parts[0] ?? null;
-  const last_name =
-    parts.length > 1 ? parts.slice(1).join(" ") : null;
 
   try {
     await db
       .prepare(
-        "INSERT INTO users (id, name, email, created_at, password, role, first_name, last_name, date_of_birth, bio) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL)",
+        "INSERT INTO users (id, name, email, created_at, password, role, date_of_birth, bio) VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, NULL)",
       )
-      .bind(
-        id,
-        input.name.trim(),
-        email,
-        created_at,
-        input.password,
-        input.role,
-        first_name,
-        last_name,
-      )
+      .bind(id, resolvedName, email, created_at, input.password, input.role)
       .run();
   } catch (e) {
     if (isUniqueEmailViolation(e)) {
@@ -287,26 +254,22 @@ export async function updateUser(
     id: string;
     name?: string;
     email?: string;
-    first_name?: string | null;
-    last_name?: string | null;
     date_of_birth?: string | null;
     bio?: string | null;
   },
 ): Promise<User | null> {
   const existing = await getUser(db, input.id);
   if (!existing) return null;
-  const name = input.name ?? existing.name;
+  const name =
+    input.name !== undefined ? input.name.trim() : existing.name;
   const email = (input.email ?? existing.email).trim().toLowerCase();
-  const { first_name, last_name, date_of_birth, bio } = mergeProfileInputs(
-    input,
-    existing,
-  );
+  const { date_of_birth, bio } = mergeProfileInputs(input, existing);
   try {
     await db
       .prepare(
-        "UPDATE users SET name = ?1, email = ?2, first_name = ?3, last_name = ?4, date_of_birth = ?5, bio = ?6 WHERE id = ?7",
+        "UPDATE users SET name = ?1, email = ?2, date_of_birth = ?3, bio = ?4 WHERE id = ?5",
       )
-      .bind(name, email, first_name, last_name, date_of_birth, bio, input.id)
+      .bind(name, email, date_of_birth, bio, input.id)
       .run();
   } catch (e) {
     if (isUniqueEmailViolation(e)) {
@@ -327,8 +290,7 @@ export async function updateMemberProfile(
   db: D1Database,
   userId: string,
   input: {
-    first_name?: string | null;
-    last_name?: string | null;
+    name?: string;
     date_of_birth?: string | null;
     bio?: string | null;
   },
@@ -363,8 +325,6 @@ export function userResponseBody(user: User) {
     email: user.email,
     role: user.role,
     created_at: user.created_at,
-    first_name: user.first_name,
-    last_name: user.last_name,
     date_of_birth: user.date_of_birth,
     bio: user.bio,
   };

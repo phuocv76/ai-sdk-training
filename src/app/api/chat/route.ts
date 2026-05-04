@@ -178,23 +178,18 @@ export async function POST(req: Request) {
       updateMyProfile: tool({
         description: CHAT_TOOL_MESSAGES.UPDATE_MY_PROFILE,
         inputSchema: z.object({
-          first_name: z.string().max(120).nullable().optional(),
-          last_name: z.string().max(120).nullable().optional(),
+          name: z.string().min(1).max(120).optional(),
           date_of_birth: dobField,
           bio: z.string().max(8000).nullable().optional(),
         }),
         execute: async (input) => {
           try {
             const patch: {
-              first_name?: string | null;
-              last_name?: string | null;
+              name?: string;
               date_of_birth?: string | null;
               bio?: string | null;
             } = {};
-            if (input.first_name !== undefined)
-              patch.first_name = input.first_name;
-            if (input.last_name !== undefined)
-              patch.last_name = input.last_name;
+            if (input.name !== undefined) patch.name = input.name;
             if (input.date_of_birth !== undefined) {
               patch.date_of_birth =
                 input.date_of_birth === "" || input.date_of_birth === null ?
@@ -269,8 +264,6 @@ export async function POST(req: Request) {
           id: z.string(),
           name: z.string().optional(),
           email: z.string().email().optional(),
-          first_name: z.string().max(120).nullable().optional(),
-          last_name: z.string().max(120).nullable().optional(),
           date_of_birth: dobField,
           bio: z.string().max(8000).nullable().optional(),
         }),
@@ -282,8 +275,6 @@ export async function POST(req: Request) {
                 id,
                 name: fields.name,
                 email: fields.email,
-                first_name: fields.first_name,
-                last_name: fields.last_name,
                 bio: fields.bio,
                 ...(fields.date_of_birth !== undefined ?
                   {

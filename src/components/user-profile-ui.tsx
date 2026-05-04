@@ -56,7 +56,6 @@ export function ProfileFieldsDisplay({
   user: User;
   variant?: "default" | "compact";
 }) {
-  const dn = displayName(user);
   const cls =
     variant === "compact"
       ? "grid gap-4 sm:grid-cols-2"
@@ -64,18 +63,13 @@ export function ProfileFieldsDisplay({
 
   return (
     <dl className={cls}>
-      <Field label={PROFILE_UI_MESSAGES.DISPLAY_NAME_LABEL}>{dn}</Field>
+      <Field label={PROFILE_UI_MESSAGES.NAME_LABEL}>
+        {displayName(user)}
+      </Field>
       <Field label={PROFILE_UI_MESSAGES.EMAIL_LABEL}>{user.email}</Field>
-      <Field label={PROFILE_UI_MESSAGES.FIRST_NAME_LABEL}>
-        {user.first_name?.trim() || UI_SYMBOLS.EM_DASH}
-      </Field>
-      <Field label={PROFILE_UI_MESSAGES.LAST_NAME_LABEL}>
-        {user.last_name?.trim() || UI_SYMBOLS.EM_DASH}
-      </Field>
       <Field label={PROFILE_UI_MESSAGES.DATE_OF_BIRTH_LABEL}>
         {formatDob(user.date_of_birth)}
       </Field>
-      <Field label={PROFILE_UI_MESSAGES.LEGACY_NAME_LABEL}>{user.name}</Field>
       <Field label={PROFILE_UI_MESSAGES.ROLE_LABEL}>
         <span
           className={`text-sm font-semibold uppercase ${user.role === "admin"

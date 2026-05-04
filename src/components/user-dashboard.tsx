@@ -33,7 +33,7 @@ function formatTime(ts: number) {
 }
 
 /** Avatar initials derived from the resolved display name. */
-function initialsFromUser(u: Pick<User, "first_name" | "last_name" | "name">) {
+function initialsFromUser(u: Pick<User, "name">) {
   return initials(displayName(u));
 }
 
@@ -175,12 +175,8 @@ export function UserDashboard() {
     const q = search.trim().toLowerCase();
     if (!q) return users;
     return users.filter((u) => {
-      const dn = displayName(u).toLowerCase();
       return (
-        dn.includes(q) ||
-        u.name.toLowerCase().includes(q) ||
-        (u.first_name?.toLowerCase().includes(q) ?? false) ||
-        (u.last_name?.toLowerCase().includes(q) ?? false) ||
+        displayName(u).toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
         u.id.toLowerCase().includes(q)
       );
