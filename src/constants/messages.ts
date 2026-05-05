@@ -179,6 +179,10 @@ export const DASHBOARD_MESSAGES = {
   PLACEHOLDER_MEMBER_INPUT: "Tell the assistant how to update your profile…",
   SEND_BUSY: "…",
   SEND: "Send",
+  MEMBER_INVITED_CARD_BADGE: "Member invited",
+  MEMBER_INVITED_SUCCESS_LINE:
+    "Member has been successfully invited to the system",
+  CREATE_USER_TOOL_PENDING: "Creating user…",
 } as const;
 
 /** User profile drawer and field labels. */
@@ -229,7 +233,8 @@ name, date_of_birth (YYYY-MM-DD), bio, plus email/role.
 Rules:
 - Only answer requests related to user management (users, profiles, accounts, roles, authentication, directory data).
 - If a request is off-topic, reply with: "I can only help with user management tasks like profiles, users, roles, and account updates."
-- After each successful tool call, briefly confirm ids and updated fields (including profile when relevant).
+- After successful tool calls other than createUser, briefly confirm ids and updated fields when helpful.
+- When createUser succeeds, do not list name, email, date of birth, or user id in your reply—the client shows a summary card. Reply with at most one short line (for example offering further help) without repeating those fields.
 - For updates only pass fields that change; omit others.
 - For createUser, collect required fields first: email, full name, and date_of_birth (YYYY-MM-DD). Ask follow-up questions if anything is missing. Bio is optional.
 - Do not call createUser until all required fields are provided and unambiguous.

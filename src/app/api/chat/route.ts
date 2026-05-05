@@ -41,6 +41,7 @@ const USER_MANAGEMENT_TOPICS = [
   "accounts",
   "admin",
   "member",
+  "members",
   "role",
   "roles",
   "directory",
@@ -55,10 +56,16 @@ const USER_MANAGEMENT_TOPICS = [
   "login",
   "sign in",
   "create",
+  "add",
+  "invite",
   "update",
   "delete",
   "list",
 ] as const;
+
+/** Loose pattern so pasted emails (e.g. add-member requests) count as on-topic. */
+const LOOKS_LIKE_EMAIL =
+  /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
 
 function latestUserText(messages: UIMessage[] | undefined): string {
   if (!messages?.length) return "";
@@ -89,6 +96,7 @@ function latestUserText(messages: UIMessage[] | undefined): string {
 function isUserManagementRelated(input: string): boolean {
   const normalized = input.toLowerCase();
   if (!normalized) return true;
+  if (LOOKS_LIKE_EMAIL.test(input)) return true;
   return USER_MANAGEMENT_TOPICS.some((topic) => normalized.includes(topic));
 }
 
