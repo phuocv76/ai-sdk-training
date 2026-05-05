@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+// Constants
 import { API_MESSAGES } from "@/constants/messages";
+
+// Libraries
 import {
-  resolveSessionUser,
   requireDatabase,
+  resolveSessionUser,
   SESSION_COOKIE,
   SESSION_COOKIE_SETTINGS,
   SESSION_MAX_AGE_SEC,
 } from "@/lib/auth-cookies";
 import { hashPassword } from "@/lib/password";
+import { withPrisma } from "@/lib/prisma";
 import { createSession } from "@/lib/sessions";
 import { countAdmins, registerUserAccount } from "@/lib/users";
 

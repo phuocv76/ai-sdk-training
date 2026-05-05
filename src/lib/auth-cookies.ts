@@ -1,7 +1,10 @@
 import { cookies } from "next/headers";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+// Constants
 import { DATABASE_MESSAGES } from "@/constants/messages";
+
+// Libraries
 import { getUserForSession } from "@/lib/sessions";
 import type { User } from "@/lib/users";
 

@@ -1,8 +1,12 @@
 "use client";
 
-import { useAuth } from "@/components/auth-session-provider";
+// Components
+import { useAuth } from "@/components/providers/auth-session-provider";
 
+// Constants
 import { ACCOUNT_MESSAGES, UI_SYMBOLS } from "@/constants/messages";
+
+// Libraries
 import { displayName } from "@/lib/users";
 
 /** Two-letter initials from whitespace-separated words, or `UI_SYMBOLS.UNKNOWN_INITIAL`. */

@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 
+// Constants
 import { OPENAI_KEY_UI_MESSAGES } from "@/constants/messages";
 
 type OpenAiApiKeyContextValue = {

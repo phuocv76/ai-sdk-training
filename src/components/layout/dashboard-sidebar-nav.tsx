@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "@/components/auth-session-provider";
 
+// Components
+import { useAuth } from "@/components/providers/auth-session-provider";
+
+// Constants
 import { SIDEBAR_NAV_LABELS } from "@/constants/messages";
 
 const adminLinks = [

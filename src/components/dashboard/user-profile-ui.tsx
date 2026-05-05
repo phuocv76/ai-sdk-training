@@ -1,13 +1,15 @@
 "use client";
 
-import type { User } from "@/lib/users";
-import { displayName } from "@/lib/users";
-
+// Constants
 import {
   ACCOUNT_MESSAGES,
   PROFILE_UI_MESSAGES,
   UI_SYMBOLS,
 } from "@/constants/messages";
+
+// Libraries
+import { displayName } from "@/lib/users";
+import type { User } from "@/lib/users";
 
 /** Formats ISO date-only strings for display or returns the sentinel em dash when empty. */
 function formatDob(iso: string | null) {

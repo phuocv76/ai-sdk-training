@@ -1,8 +1,12 @@
 "use client";
 
-import { useAuth } from "@/components/auth-session-provider";
+// Components
+import { useAuth } from "@/components/providers/auth-session-provider";
 
+// Constants
 import { HEADER_TITLE_MESSAGES } from "@/constants/messages";
+
+// Libraries
 import { displayName } from "@/lib/users";
 
 /**

@@ -9,6 +9,7 @@ import {
 } from "ai";
 import { z } from "zod";
 
+// Constants
 import {
   API_MESSAGES,
   CHAT_SYSTEM_PROMPTS,
@@ -17,9 +18,11 @@ import {
   USER_DOMAIN_ERRORS,
   chatMemberSystemPrompt,
 } from "@/constants/messages";
+
+// Libraries
 import {
-  resolveSessionUser,
   requireDatabase,
+  resolveSessionUser,
 } from "@/lib/auth-cookies";
 import {
   createUser,

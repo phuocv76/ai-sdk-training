@@ -3,21 +3,25 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AssistantChatPopup } from "@/components/assistant-chat-popup";
 
-import { useAuth } from "@/components/auth-session-provider";
-import { useOpenAiApiKey } from "@/components/openai-api-key-context";
+// Components
+import { AssistantChatPopup } from "@/components/assistant/assistant-chat-popup";
 import {
   ProfileFieldsDisplay,
   UserProfileModal,
-} from "@/components/user-profile-ui";
+} from "@/components/dashboard/user-profile-ui";
+import { useAuth } from "@/components/providers/auth-session-provider";
+import { useOpenAiApiKey } from "@/components/providers/openai-api-key-context";
 
+// Constants
 import {
   ACCOUNT_MESSAGES,
   DASHBOARD_MESSAGES,
   REQUEST_HEADERS,
   UI_SYMBOLS,
 } from "@/constants/messages";
+
+// Libraries
 import { displayName } from "@/lib/users";
 import type { User } from "@/lib/users";
 

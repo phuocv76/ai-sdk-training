@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
+// Constants
 import { API_MESSAGES } from "@/constants/messages";
+
+// Libraries
 import {
   requireDatabase,
   resolveSessionUser,

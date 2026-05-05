@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+// Libraries
 import { requireDatabase, resolveSessionUser } from "@/lib/auth-cookies";
 import { userResponseBody } from "@/lib/users";
 

@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 
+// Constants
 import { DASHBOARD_MESSAGES } from "@/constants/messages";
+
+// Libraries
 import type { User } from "@/lib/users";
 
 import { AssistantChatComposer } from "./assistant-chat-composer";

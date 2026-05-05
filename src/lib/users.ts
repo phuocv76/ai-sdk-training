@@ -1,4 +1,7 @@
+// Constants
 import { UI_SYMBOLS, USER_DOMAIN_ERRORS } from "@/constants/messages";
+
+// Libraries
 import { hashPassword } from "@/lib/password";
 
 export type UserRole = "admin" | "member";

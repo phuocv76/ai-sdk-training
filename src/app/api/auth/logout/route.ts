@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+// Libraries
 import { requireDatabase, SESSION_COOKIE } from "@/lib/auth-cookies";
 import { deleteSession } from "@/lib/sessions";
 

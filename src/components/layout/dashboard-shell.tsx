@@ -1,14 +1,16 @@
+// Components
 import {
   DashboardAccountSummary,
   DashboardUserMenu,
-} from "@/components/dashboard-account";
-import { DashboardHeaderTitle } from "@/components/dashboard-header-title";
-import { DashboardSidebarNav } from "@/components/dashboard-sidebar-nav";
+} from "@/components/layout/dashboard-account";
+import { DashboardHeaderTitle } from "@/components/layout/dashboard-header-title";
+import { DashboardSidebarNav } from "@/components/layout/dashboard-sidebar-nav";
 import {
   OpenAiApiKeyField,
   OpenAiApiKeyProvider,
-} from "@/components/openai-api-key-context";
+} from "@/components/providers/openai-api-key-context";
 
+// Constants
 import {
   BRAND_MESSAGES,
   DASHBOARD_SHELL_MESSAGES,

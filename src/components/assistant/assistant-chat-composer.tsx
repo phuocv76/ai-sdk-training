@@ -1,5 +1,6 @@
 "use client";
 
+// Constants
 import { DASHBOARD_MESSAGES } from "@/constants/messages";
 
 type AssistantChatComposerProps = {

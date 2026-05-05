@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AuthSessionProvider } from "@/components/auth-session-provider";
 
+// Components
+import { AuthSessionProvider } from "@/components/providers/auth-session-provider";
+
+// Constants
 import { APP_METADATA_MESSAGES } from "@/constants/messages";
 
 import "./globals.css";

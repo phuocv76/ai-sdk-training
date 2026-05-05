@@ -1,8 +1,6 @@
 "use client";
 
-import type { User } from "@/lib/users";
-
-import { AUTH_SESSION_MESSAGES } from "@/constants/messages";
+import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -11,7 +9,12 @@ import {
   useMemo,
   useState,
 } from "react";
-import { usePathname, useRouter } from "next/navigation";
+
+// Constants
+import { AUTH_SESSION_MESSAGES } from "@/constants/messages";
+
+// Libraries
+import type { User } from "@/lib/users";
 
 type AuthContextValue = {
   user: User | null;

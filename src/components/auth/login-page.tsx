@@ -1,14 +1,17 @@
 "use client";
 
-import { useAuth } from "@/components/auth-session-provider";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
+// Constants
 import {
   AUTH_UI_MESSAGES,
   BRAND_MESSAGES,
   LOGIN_MESSAGES,
 } from "@/constants/messages";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+
+// Components
+import { useAuth } from "@/components/providers/auth-session-provider";
 
 /**
  * Sign-in / sign-up form that posts to auth routes and redirects on success.

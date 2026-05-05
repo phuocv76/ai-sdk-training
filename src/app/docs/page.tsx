@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import "swagger-ui-dist/swagger-ui.css";
-
 import SwaggerUI from "swagger-ui-dist/swagger-ui-bundle";
 import SwaggerUIStandalonePreset from "swagger-ui-dist/swagger-ui-standalone-preset";
+
+import "swagger-ui-dist/swagger-ui.css";
 
 export default function ApiDocsPage() {
   const containerRef = useRef<HTMLDivElement | null>(null);

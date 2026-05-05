@@ -1,5 +1,6 @@
-import { DashboardShell } from "@/components/dashboard-shell";
-import { UserDashboard } from "@/components/user-dashboard";
+// Components
+import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { UserDashboard } from "@/components/dashboard/user-dashboard";
 
 /**
  * Signed-in dashboard: directory, profile, and chat assistant.
