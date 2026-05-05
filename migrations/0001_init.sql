@@ -18,7 +18,7 @@ CREATE TABLE sessions (
 );
 
 -- Default admin (development): admin@admin.com / Abcd@123
--- Password: PBKDF2-SHA256, 210k iterations, salt "default-admin-sl" (see src/lib/password.ts).
+-- Password: bcrypt (12 rounds), same algorithm as hashPassword in src/lib/password.ts.
 INSERT INTO users (
   id,
   name,
@@ -34,7 +34,7 @@ INSERT INTO users (
   'admin@admin.com',
   'admin',
   1767225600000,
-  'pbkdf2-sha256:210000:ZGVmYXVsdC1hZG1pbi1zbA==:C7OUQuF4SkGZ7MjSUHv7+2ox4nQHwXjYQ52XC98hq6I=',
+  '$2b$12$O/BqcLakFcZ4epekHzCvzeVEgzodRJ4d1QlnKMYJhNYA9sibqks/2',
   NULL,
   NULL
 );

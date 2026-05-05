@@ -5,7 +5,6 @@ import {
   requireDatabase,
   resolveSessionUser,
 } from "@/lib/auth-cookies";
-import { withPrisma } from "@/lib/prisma";
 import { getUser, userResponseBody } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +23,7 @@ export async function GET(
     return NextResponse.json({ error: dbCtx.error }, { status: dbCtx.status });
   }
 
-  const me = await withPrisma(dbCtx.db, (p) => resolveSessionUser(p));
+  const me = await resolveSessionUser(dbCtx.db);
   if (!me) {
     return NextResponse.json(
       { error: API_MESSAGES.UNAUTHORIZED },
@@ -38,7 +37,7 @@ export async function GET(
     );
   }
 
-  const user = await withPrisma(dbCtx.db, (p) => getUser(p, id));
+  const user = await getUser(dbCtx.db, id);
   if (!user) {
     return NextResponse.json(
       { error: API_MESSAGES.USER_NOT_FOUND },

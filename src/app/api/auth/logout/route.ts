@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { requireDatabase, SESSION_COOKIE } from "@/lib/auth-cookies";
-import { withPrisma } from "@/lib/prisma";
 import { deleteSession } from "@/lib/sessions";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +18,7 @@ export async function POST() {
   const jar = await cookies();
   const sid = jar.get(SESSION_COOKIE)?.value;
   if (sid) {
-    await withPrisma(dbCtx.db, (p) => deleteSession(p, sid));
+    await deleteSession(dbCtx.db, sid);
   }
 
   const res = NextResponse.json({ ok: true });

@@ -21,7 +21,6 @@ import {
   resolveSessionUser,
   requireDatabase,
 } from "@/lib/auth-cookies";
-import { withPrisma } from "@/lib/prisma";
 import {
   createUser,
   deleteUser,
@@ -123,7 +122,7 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json" },
     });
   }
-  const me = await withPrisma(dbCtx.db, (p) => resolveSessionUser(p));
+  const me = await resolveSessionUser(dbCtx.db);
   if (!me) {
     return new Response(JSON.stringify({ error: API_MESSAGES.UNAUTHORIZED }), {
       status: 401,
@@ -171,7 +170,7 @@ export async function POST(req: Request) {
         description: CHAT_TOOL_MESSAGES.GET_MY_PROFILE,
         inputSchema: z.object({}),
         execute: async () => {
-          const u = await withPrisma(db, (p) => getUser(p, me.id));
+          const u = await getUser(db, me.id);
           return { profile: u ? userResponseBody(u) : null };
         },
       }),
@@ -198,9 +197,7 @@ export async function POST(req: Request) {
             }
             if (input.bio !== undefined) patch.bio = input.bio;
 
-            const user = await withPrisma(db, (p) =>
-              updateMemberProfile(p, me.id, patch),
-            );
+            const user = await updateMemberProfile(db, me.id, patch);
             if (!user)
               return {
                 ok: false as const,
@@ -222,7 +219,7 @@ export async function POST(req: Request) {
         description: CHAT_TOOL_MESSAGES.LIST_USERS,
         inputSchema: z.object({}),
         execute: async () => ({
-          users: await withPrisma(db, (p) => listUsers(p)),
+          users: await listUsers(db),
         }),
       }),
       getUser: tool({
@@ -231,7 +228,7 @@ export async function POST(req: Request) {
           id: z.string().describe(CHAT_TOOL_MESSAGES.USER_ID_PARAM),
         }),
         execute: async ({ id }) => {
-          const user = await withPrisma(db, (p) => getUser(p, id));
+          const user = await getUser(db, id);
           return user ?? { notFound: true, id };
         },
       }),
@@ -250,7 +247,7 @@ export async function POST(req: Request) {
         }),
         execute: async (input) => {
           try {
-            const user = await withPrisma(db, (p) => createUser(p, input));
+            const user = await createUser(db, input);
             return { ok: true as const, user };
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
@@ -270,23 +267,21 @@ export async function POST(req: Request) {
         execute: async (input) => {
           try {
             const { id, ...fields } = input;
-            const user = await withPrisma(db, (p) =>
-              updateUser(p, {
-                id,
-                name: fields.name,
-                email: fields.email,
-                bio: fields.bio,
-                ...(fields.date_of_birth !== undefined ?
-                  {
-                    date_of_birth:
-                      fields.date_of_birth === "" ||
-                        fields.date_of_birth === null ?
-                        null
-                      : fields.date_of_birth,
-                  }
-                : {}),
-              }),
-            );
+            const user = await updateUser(db, {
+              id,
+              name: fields.name,
+              email: fields.email,
+              bio: fields.bio,
+              ...(fields.date_of_birth !== undefined ?
+                {
+                  date_of_birth:
+                    fields.date_of_birth === "" ||
+                      fields.date_of_birth === null ?
+                      null
+                    : fields.date_of_birth,
+                }
+              : {}),
+            });
             if (!user)
               return { ok: false as const, error: API_MESSAGES.USER_NOT_FOUND };
             return { ok: true as const, user };
@@ -302,7 +297,7 @@ export async function POST(req: Request) {
           id: z.string(),
         }),
         execute: async ({ id }) => {
-          const { deleted } = await withPrisma(db, (p) => deleteUser(p, id));
+          const { deleted } = await deleteUser(db, id);
           return { ok: deleted, id };
         },
       }),

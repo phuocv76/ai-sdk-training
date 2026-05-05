@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { requireDatabase, resolveSessionUser } from "@/lib/auth-cookies";
-import { withPrisma } from "@/lib/prisma";
 import { userResponseBody } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +18,7 @@ export async function GET() {
     );
   }
 
-  const user = await withPrisma(dbCtx.db, (p) => resolveSessionUser(p));
+  const user = await resolveSessionUser(dbCtx.db);
   return NextResponse.json({
     user: user ? userResponseBody(user) : null,
   });

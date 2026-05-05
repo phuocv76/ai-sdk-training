@@ -1,31 +1,46 @@
-const PREFIX = "pbkdf2-sha256";
-const ITERATIONS = 210_000;
+import { compare, genSalt, hash } from 'bcrypt';
+
+/** Cost factor for new password hashes. */
+const BCRYPT_ROUNDS = 12;
+
+/** Legacy PBKDF2-SHA256 encoding (verify-only for existing rows). */
+const LEGACY_PREFIX = 'pbkdf2-sha256';
 
 /**
- * Generates `len` cryptographically secure random bytes.
- * @param len Number of bytes.
+ * Produces a bcrypt password hash (`genSalt` + `hash`).
+ * @param password Plain-text password from the client.
  */
-function randomBytes(len: number): Uint8Array {
-  const b = new Uint8Array(len);
-  crypto.getRandomValues(b);
-  return b;
+export async function hashPassword(password: string): Promise<string> {
+  const salt = await genSalt(BCRYPT_ROUNDS);
+  return hash(password, salt);
 }
 
 /**
- * Base64-encodes binary data for storage in the hashed password string.
- * @param buf Bytes to encode.
+ * Verifies a plaintext password against a stored hash (bcrypt or legacy PBKDF2).
+ * @param password Candidate password.
+ * @param stored Bcrypt string, legacy `pbkdf2-sha256:...` string, or absent.
  */
-function b64encode(buf: ArrayBuffer | Uint8Array): string {
-  const u8 = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
-  let s = "";
-  for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]!);
-  return btoa(s);
+export async function verifyPassword(
+  password: string,
+  stored: string | null | undefined,
+): Promise<boolean> {
+  if (!stored) return false;
+
+  if (stored.startsWith('$2')) {
+    try {
+      return await compare(password, stored);
+    } catch {
+      return false;
+    }
+  }
+
+  if (stored.startsWith(`${LEGACY_PREFIX}:`)) {
+    return verifyLegacyPbkdf2(password, stored);
+  }
+
+  return false;
 }
 
-/**
- * Decodes stored base64 segments back into bytes.
- * @param s Standard base64 string.
- */
 function b64decode(s: string): Uint8Array {
   const bin = atob(s);
   const out = new Uint8Array(bin.length);
@@ -33,27 +48,40 @@ function b64decode(s: string): Uint8Array {
   return out;
 }
 
-/**
- * Produces an encoded PBKDF2-SHA256 password string with embedded salt and parameters.
- * @param password Plain-text password from the client.
- */
-export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16);
-  const hash = await derive(password, salt, ITERATIONS);
-  return `${PREFIX}:${ITERATIONS}:${b64encode(salt)}:${b64encode(hash)}`;
+async function derive(
+  password: string,
+  salt: Uint8Array,
+  iterations: number,
+): Promise<Uint8Array> {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      salt: salt.buffer.slice(
+        salt.byteOffset,
+        salt.byteOffset + salt.byteLength,
+      ) as BufferSource,
+      iterations,
+    },
+    keyMaterial,
+    256,
+  );
+  return new Uint8Array(bits);
 }
 
-/**
- * Verifies a plaintext password against a stored encoded hash (timing-safe comparison).
- * @param password Candidate password.
- * @param stored Serialized hash from `hashPassword`, or absent for passwordless users.
- */
-export async function verifyPassword(
+async function verifyLegacyPbkdf2(
   password: string,
-  stored: string | null | undefined,
+  stored: string,
 ): Promise<boolean> {
-  if (!stored?.startsWith(`${PREFIX}:`)) return false;
-  const parts = stored.split(":");
+  const parts = stored.split(':');
   if (parts.length !== 4) return false;
   const [, iterRaw, saltB64, hashB64] = parts;
   const iterations = Number(iterRaw);
@@ -79,39 +107,4 @@ export async function verifyPassword(
   } catch {
     return false;
   }
-}
-
-/**
- * Derives a 32-byte key using Web Crypto PBKDF2.
- * @param password User password bytes.
- * @param salt Random salt.
- * @param iterations PBKDF2 iteration count.
- */
-async function derive(
-  password: string,
-  salt: Uint8Array,
-  iterations: number,
-): Promise<Uint8Array> {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(password),
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
-  const bits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      hash: "SHA-256",
-      salt: salt.buffer.slice(
-        salt.byteOffset,
-        salt.byteOffset + salt.byteLength,
-      ) as BufferSource,
-      iterations,
-    },
-    keyMaterial,
-    256,
-  );
-  return new Uint8Array(bits);
 }
