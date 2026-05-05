@@ -41,7 +41,9 @@ export async function getUserForSession(
     .bind(sessionId, now)
     .first()) as { user_id: string } | null;
   if (!session) return null;
-  return getUser(db, session.user_id);
+  const user = await getUser(db, session.user_id);
+  if (!user || user.status !== "active") return null;
+  return user;
 }
 
 /**

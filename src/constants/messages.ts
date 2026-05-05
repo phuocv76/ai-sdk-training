@@ -8,6 +8,9 @@ export const API_MESSAGES = {
   INVALID_INPUT: "Invalid input.",
   ALREADY_SIGNED_IN: "Already signed in. Sign out first.",
   INVALID_CREDENTIALS: "Invalid email or password.",
+  ACCOUNT_INACTIVE: "This account has been deactivated.",
+  CANNOT_DEACTIVATE_SELF_ACCOUNT:
+    "You cannot deactivate your own account while signed in.",
   UNAUTHORIZED: "Unauthorized.",
   ADMIN_LIST_USERS_ONLY: "Only admins can list all users.",
   FORBIDDEN: "Forbidden.",
@@ -167,6 +170,7 @@ export const DASHBOARD_MESSAGES = {
   COL_STATUS: "Status",
   COL_JOINED: "Joined",
   ROW_STATUS_ACTIVE: "Active",
+  ROW_STATUS_INACTIVE: "Inactive",
   FOOTER_SHOWING_PREFIX: "Showing ",
   FOOTER_OF: " of ",
   FOOTER_USERS: "users",
@@ -182,11 +186,15 @@ export const DASHBOARD_MESSAGES = {
   MEMBER_INVITED_CARD_BADGE: "Member invited",
   MEMBER_INVITED_SUCCESS_LINE:
     "Member has been successfully invited to the system",
+  USER_UPDATED_CARD_BADGE: "User updated",
+  USER_UPDATED_SUCCESS_LINE: "Directory record updated — details below.",
   CREATE_USER_TOOL_PENDING: "Creating user…",
+  UPDATE_USER_TOOL_PENDING: "Updating user…",
 } as const;
 
 /** User profile drawer and field labels. */
 export const PROFILE_UI_MESSAGES = {
+  STATUS_LABEL: "Status",
   NAME_LABEL: "Name",
   EMAIL_LABEL: "Email",
   DATE_OF_BIRTH_LABEL: "Date of birth",
@@ -221,21 +229,23 @@ export const CHAT_TOOL_MESSAGES = {
   CREATE_USER:
     "Create a directory user with unique email, full name, and date of birth (YYYY-MM-DD); bio is optional. Default password is Abcd@123.",
   UPDATE_USER:
-    "Update identity, profile, or both for any user by id (omit unchanged fields)",
+    "Update identity, profile, account status (active | inactive), or any combination for any user by id. Omit unchanged fields. Setting status to inactive signs the user out everywhere.",
   DELETE_USER: "Delete a user by id.",
 } as const;
 
 /** `streamText` system prompts for admins vs members. */
 export const CHAT_SYSTEM_PROMPTS = {
   ADMIN: `You are the assistant for an internal user directory. Profiles live on the users table:
-name, date_of_birth (YYYY-MM-DD), bio, plus email/role.
+name, date_of_birth (YYYY-MM-DD), bio, email, role, and status (active or inactive).
 
 Rules:
 - Only answer requests related to user management (users, profiles, accounts, roles, authentication, directory data).
 - If a request is off-topic, reply with: "I can only help with user management tasks like profiles, users, roles, and account updates."
 - After successful tool calls other than createUser, briefly confirm ids and updated fields when helpful.
 - When createUser succeeds, do not list name, email, date of birth, or user id in your reply—the client shows a summary card. Reply with at most one short line (for example offering further help) without repeating those fields.
+- When updateUser succeeds, do not repeat user fields (name, email, id, role, status, profile)—the client shows the same style of summary card. Reply with at most one short line if helpful.
 - For updates only pass fields that change; omit others.
+- To deactivate a user account (block login and end sessions), call updateUser with status "inactive". To re-enable, use status "active". Never deactivate the signed-in admin's own account.
 - For createUser, collect required fields first: email, full name, and date_of_birth (YYYY-MM-DD). Ask follow-up questions if anything is missing. Bio is optional.
 - Do not call createUser until all required fields are provided and unambiguous.
 - Handle unique email collisions clearly.`,

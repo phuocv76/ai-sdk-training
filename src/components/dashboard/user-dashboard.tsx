@@ -313,7 +313,7 @@ export function UserDashboard() {
         {isAdmin ?
           <section
             id="user-directory"
-            className="flex min-h-0 flex-col rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-card)] shadow-sm xl:col-span-5"
+            className="flex min-h-0 flex-col rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-card)] shadow-sm xl:col-span-full"
           >
             <header className="flex flex-col gap-4 border-b border-[var(--dash-border)] p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -456,9 +456,14 @@ export function UserDashboard() {
                             </span>
                           </td>
                           <td className="px-5 py-4">
-                            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                              {DASHBOARD_MESSAGES.ROW_STATUS_ACTIVE}
-                            </span>
+                            {u.status === "inactive" ?
+                              <span className="inline-flex items-center rounded-full bg-[var(--background)] px-2.5 py-0.5 text-xs font-semibold text-[var(--dash-muted)] ring-1 ring-[var(--dash-border)]">
+                                {DASHBOARD_MESSAGES.ROW_STATUS_INACTIVE}
+                              </span>
+                            : <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                                {DASHBOARD_MESSAGES.ROW_STATUS_ACTIVE}
+                              </span>
+                            }
                           </td>
                           <td className="hidden whitespace-nowrap px-5 py-4 text-[var(--dash-muted)] lg:table-cell">
                             {formatTime(u.created_at)}

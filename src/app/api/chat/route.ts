@@ -64,6 +64,15 @@ const USER_MANAGEMENT_TOPICS = [
   "update",
   "delete",
   "list",
+  "deactivate",
+  "deactive",
+  "disable",
+  "disabled",
+  "inactive",
+  "activate",
+  "enable",
+  "enabled",
+  "status",
 ] as const;
 
 /** Loose pattern so pasted emails (e.g. add-member requests) count as on-topic. */
@@ -274,15 +283,23 @@ export async function POST(req: Request) {
           email: z.string().email().optional(),
           date_of_birth: dobField,
           bio: z.string().max(8000).nullable().optional(),
+          status: z.enum(["active", "inactive"]).optional(),
         }),
         execute: async (input) => {
           try {
             const { id, ...fields } = input;
+            if (fields.status === "inactive" && id === me.id) {
+              return {
+                ok: false as const,
+                error: API_MESSAGES.CANNOT_DEACTIVATE_SELF_ACCOUNT,
+              };
+            }
             const user = await updateUser(db, {
               id,
               name: fields.name,
               email: fields.email,
               bio: fields.bio,
+              ...(fields.status !== undefined ? { status: fields.status } : {}),
               ...(fields.date_of_birth !== undefined ?
                 {
                   date_of_birth:

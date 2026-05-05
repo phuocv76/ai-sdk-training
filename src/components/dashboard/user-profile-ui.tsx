@@ -3,6 +3,7 @@
 // Constants
 import {
   ACCOUNT_MESSAGES,
+  DASHBOARD_MESSAGES,
   PROFILE_UI_MESSAGES,
   UI_SYMBOLS,
 } from "@/constants/messages";
@@ -83,6 +84,16 @@ export function ProfileFieldsDisplay({
             ACCOUNT_MESSAGES.ROLE_ADMIN
           : ACCOUNT_MESSAGES.ROLE_MEMBER}
         </span>
+      </Field>
+      <Field label={PROFILE_UI_MESSAGES.STATUS_LABEL}>
+        {user.status === "inactive" ?
+          <span className="inline-flex items-center rounded-full bg-[var(--background)] px-2.5 py-0.5 text-xs font-semibold text-[var(--dash-muted)] ring-1 ring-[var(--dash-border)]">
+            {DASHBOARD_MESSAGES.ROW_STATUS_INACTIVE}
+          </span>
+        : <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+            {DASHBOARD_MESSAGES.ROW_STATUS_ACTIVE}
+          </span>
+        }
       </Field>
       <Field label={PROFILE_UI_MESSAGES.JOINED_LABEL}>
         {formatJoined(user.created_at)}

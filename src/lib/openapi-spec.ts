@@ -41,6 +41,7 @@ export const openApiSpec = {
           name: { type: "string" },
           email: { type: "string", format: "email" },
           role: { type: "string", enum: ["admin", "member"] },
+          status: { type: "string", enum: ["active", "inactive"] },
           created_at: { type: "integer", format: "int64" },
           date_of_birth: {
             type: "string",
@@ -54,6 +55,7 @@ export const openApiSpec = {
           "name",
           "email",
           "role",
+          "status",
           "created_at",
           "date_of_birth",
           "bio",

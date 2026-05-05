@@ -62,6 +62,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (row.status !== "active") {
+      return NextResponse.json(
+        { error: API_MESSAGES.ACCOUNT_INACTIVE },
+        { status: 403 },
+      );
+    }
+
     const sessionId = await createSession(db, row.id);
     const { password: _p, ...u } = row;
     const res = NextResponse.json({

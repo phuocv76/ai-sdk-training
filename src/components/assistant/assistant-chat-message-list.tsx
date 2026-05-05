@@ -3,8 +3,10 @@
 import { getToolName, isTextUIPart, isToolUIPart } from "ai";
 
 import {
-  assistantMessageShouldHideProseForCreateUser,
+  assistantMessageShouldHideProseForDirectoryResultCard,
   CreateUserToolDisplay,
+  ListUsersToolDisplay,
+  UpdateUserToolDisplay,
 } from "@/components/create-user-tool-display";
 import { DASHBOARD_MESSAGES } from "@/constants/messages";
 
@@ -43,9 +45,9 @@ export function AssistantChatMessageList({
         </div>
       ) : null}
       {messages.map((m) => {
-        const hideAssistantTextForInviteCard =
+        const hideAssistantTextForDirectoryCard =
           m.role === "assistant" &&
-          assistantMessageShouldHideProseForCreateUser(m.parts);
+          assistantMessageShouldHideProseForDirectoryResultCard(m.parts);
 
         return (
           <div
@@ -83,7 +85,7 @@ export function AssistantChatMessageList({
                 }
 
                 if (isTextUIPart(part)) {
-                  if (hideAssistantTextForInviteCard) {
+                  if (hideAssistantTextForDirectoryCard) {
                     return null;
                   }
                   return (
@@ -96,6 +98,12 @@ export function AssistantChatMessageList({
                   const title = getToolName(part);
                   if (title === "createUser") {
                     return <CreateUserToolDisplay key={i} part={part} />;
+                  }
+                  if (title === "updateUser") {
+                    return <UpdateUserToolDisplay key={i} part={part} />;
+                  }
+                  if (title === "listUsers") {
+                    return <ListUsersToolDisplay key={i} part={part} />;
                   }
                   return (
                     <div
