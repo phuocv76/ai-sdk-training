@@ -17,6 +17,9 @@ importers:
       ai:
         specifier: ^6.0.172
         version: 6.0.172(zod@4.4.1)
+      bcrypt:
+        specifier: npm:bcryptjs@^3.0.3
+        version: bcryptjs@3.0.3
       next:
         specifier: 16.2.4
         version: 16.2.4(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1787,6 +1790,10 @@ packages:
   baseline-browser-mapping@2.10.24:
     resolution: {integrity: sha512-I2NkZOOrj2XuguvWCK6OVh9GavsNjZjK908Rq3mIBK25+GD8vPX5w2WdxVqnQ7xx3SrZJiCiZFu+/Oz50oSYSA==}
     engines: {node: '>=6.0.0'}
+    hasBin: true
+
+  bcryptjs@3.0.3:
+    resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
     hasBin: true
 
   blake3-wasm@2.1.5:
@@ -5677,6 +5684,8 @@ snapshots:
   balanced-match@4.0.4: {}
 
   baseline-browser-mapping@2.10.24: {}
+
+  bcryptjs@3.0.3: {}
 
   blake3-wasm@2.1.5: {}
 
