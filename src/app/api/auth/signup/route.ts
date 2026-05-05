@@ -13,7 +13,6 @@ import {
   SESSION_MAX_AGE_SEC,
 } from "@/lib/auth-cookies";
 import { hashPassword } from "@/lib/password";
-import { withPrisma } from "@/lib/prisma";
 import { createSession } from "@/lib/sessions";
 import { countAdmins, registerUserAccount } from "@/lib/users";
 
