@@ -6,8 +6,8 @@ import { useMemo, useState } from "react";
 import { DASHBOARD_MESSAGES } from "@/constants/messages";
 
 // Libraries
-import type { User } from "@/lib/users";
-import { renderInlineMarkdownBold } from "@/lib/render-inline-markdown-bold";
+import type { User } from "@/lib/domain/user";
+import { renderInlineMarkdownBold } from "@/lib/markdown/render-inline-markdown-bold";
 
 import { AssistantChatComposer } from "./assistant-chat-composer";
 import { AssistantChatMessageList } from "./assistant-chat-message-list";

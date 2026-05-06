@@ -7,7 +7,7 @@
     "prebuild": "node -e \"require('fs').rmSync('.next/dev',{recursive:true,force:true})\"",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint .",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types cloudflare-env.d.ts",

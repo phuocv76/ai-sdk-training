@@ -3,12 +3,12 @@ import { NextResponse } from "next/server";
 // Constants
 import { API_MESSAGES } from "@/constants/messages";
 
-// Libraries
+import { userResponseBody } from "@/lib/domain/user";
 import {
   requireDatabase,
   resolveSessionUser,
-} from "@/lib/auth-cookies";
-import { getUser, userResponseBody } from "@/lib/users";
+} from "@/server/auth/cookies";
+import { getUser } from "@/server/users/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -16,10 +16,10 @@ export const dynamic = "force-dynamic";
  * Fetches one user: admins see anyone; members see only themselves.
  * @param ctx Route context with `{ id }` param.
  */
-export async function GET(
+export const GET = async (
   _: Request,
   ctx: { params: Promise<{ id: string }> },
-) {
+) => {
   const { id } = await ctx.params;
   const dbCtx = await requireDatabase();
   if ("error" in dbCtx) {
@@ -49,4 +49,4 @@ export async function GET(
   }
 
   return NextResponse.json({ user: userResponseBody(user) });
-}
+};

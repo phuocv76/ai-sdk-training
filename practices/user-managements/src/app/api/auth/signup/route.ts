@@ -3,18 +3,17 @@ import { NextResponse } from "next/server";
 // Constants
 import { API_MESSAGES } from "@/constants/messages";
 
-// Libraries
+import { signupBodySchema } from "@/lib/schemas/user-management-schemas";
 import {
   requireDatabase,
   resolveSessionUser,
   SESSION_COOKIE,
   SESSION_COOKIE_SETTINGS,
   SESSION_MAX_AGE_SEC,
-} from "@/lib/auth-cookies";
-import { hashPassword } from "@/lib/password";
-import { createSession } from "@/lib/sessions";
-import { signupBodySchema } from "@/lib/user-management-schemas";
-import { countAdmins, registerUserAccount } from "@/lib/users";
+} from "@/server/auth/cookies";
+import { hashPassword } from "@/server/auth/password";
+import { createSession } from "@/server/auth/sessions";
+import { countAdmins, registerUserAccount } from "@/server/users/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +21,7 @@ export const dynamic = "force-dynamic";
  * Registers a new account (first signup becomes admin) and starts a session.
  * @returns JSON `{ ok, user }` or `{ error }` with conflict/validation status.
  */
-export async function POST(req: Request) {
+export const POST = async (req: Request) => {
   const parsed = signupBodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
@@ -73,4 +72,4 @@ export async function POST(req: Request) {
       { status: 409 },
     );
   }
-}
+};

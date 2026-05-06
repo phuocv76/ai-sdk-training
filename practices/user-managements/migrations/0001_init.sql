@@ -18,7 +18,7 @@ CREATE TABLE sessions (
 );
 
 -- Default admin (development): admin@admin.com / Abcd@123
--- Password: bcrypt (12 rounds), same algorithm as hashPassword in src/lib/password.ts.
+-- Password: bcrypt (12 rounds), same algorithm as hashPassword in src/server/auth/password.ts.
 INSERT INTO users (
   id,
   name,

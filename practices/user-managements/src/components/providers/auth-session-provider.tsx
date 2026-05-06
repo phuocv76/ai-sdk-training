@@ -14,7 +14,7 @@ import {
 import { AUTH_SESSION_MESSAGES } from "@/constants/messages";
 
 // Libraries
-import type { User } from "@/lib/users";
+import type { User } from "@/lib/domain/user";
 
 type AuthContextValue = {
   user: User | null;
@@ -29,50 +29,64 @@ const AuthContext = createContext<AuthContextValue | null>(null);
  * Reads the current auth context; must be used under `AuthSessionProvider`.
  * @throws When called outside the provider tree.
  */
-export function useAuth(): AuthContextValue {
+export const useAuth = (): AuthContextValue => {
   const ctx = useContext(AuthContext);
   if (!ctx) {
     throw new Error(AUTH_SESSION_MESSAGES.USE_AUTH_OUTSIDE_PROVIDER);
   }
   return ctx;
-}
+};
 
 const PUBLIC_PATHS = new Set(["/login", "/docs"]);
 
-function isPublicPath(pathname: string | null): boolean {
-  return pathname != null && PUBLIC_PATHS.has(pathname);
-}
+const isPublicPath = (pathname: string | null): boolean =>
+  pathname != null && PUBLIC_PATHS.has(pathname);
 
 /**
  * Fetches `/api/auth/me`, gates protected routes, and redirects between `/login` and `/`.
  * `/docs` (Swagger UI) is reachable without a session.
  */
-export function AuthSessionProvider({
+export const AuthSessionProvider = ({
   children,
 }: {
   children: React.ReactNode;
-}) {
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
 
-  const refresh = useCallback(async () => {
+  const fetchMe = useCallback(async (): Promise<User | null> => {
     try {
       const res = await fetch("/api/auth/me", {
         credentials: "include",
         cache: "no-store",
       });
       const data = (await res.json()) as { user: User | null };
-      setUser(data.user ?? null);
+      return data.user ?? null;
     } catch {
-      setUser(null);
+      return null;
     }
   }, []);
 
   useEffect(() => {
-    void refresh().finally(() => setLoading(false));
-  }, [refresh]);
+    let cancelled = false;
+    void (async () => {
+      const u = await fetchMe();
+      if (!cancelled) {
+        setUser(u);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchMe]);
+
+  const refresh = useCallback(async () => {
+    const u = await fetchMe();
+    setUser(u);
+  }, [fetchMe]);
 
   useEffect(() => {
     if (loading) return;
@@ -119,4 +133,4 @@ export function AuthSessionProvider({
   return (
     <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
   );
-}
+};

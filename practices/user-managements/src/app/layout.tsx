@@ -28,11 +28,11 @@ export const metadata: Metadata = {
 /**
  * Root HTML shell wrapping all routes with global fonts and auth provider.
  */
-export default function RootLayout({
+const RootLayout = ({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+}>) => {
   return (
     <html
       lang="en"
@@ -43,4 +43,6 @@ export default function RootLayout({
       </body>
     </html>
   );
-}
+};
+
+export default RootLayout;

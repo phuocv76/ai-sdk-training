@@ -7,12 +7,12 @@ import { useAuth } from "@/components/providers/auth-session-provider";
 import { HEADER_TITLE_MESSAGES } from "@/constants/messages";
 
 // Libraries
-import { displayName } from "@/lib/users";
+import { displayName } from "@/lib/domain/user";
 
 /**
  * Responsive page title reflecting admin overview vs signed-in member name.
  */
-export function DashboardHeaderTitle() {
+export const DashboardHeaderTitle = () => {
   const { user } = useAuth();
   if (!user) return null;
 
@@ -29,4 +29,4 @@ export function DashboardHeaderTitle() {
       </h1>
     </div>
   );
-}
+};

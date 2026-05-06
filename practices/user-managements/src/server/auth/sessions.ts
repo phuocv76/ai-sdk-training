@@ -1,6 +1,8 @@
-// Libraries
-import type { User } from "@/lib/users";
-import { getUser } from "@/lib/users";
+// Domain
+import type { User } from "@/lib/domain/user";
+
+// Server
+import { getUser } from "@/server/users/repository";
 
 const WEEK_SEC = 60 * 60 * 24 * 7;
 

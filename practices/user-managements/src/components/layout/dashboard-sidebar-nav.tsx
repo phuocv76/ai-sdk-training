@@ -34,11 +34,11 @@ const memberLinks = [
 /**
  * Renders a simple SVG glyph for sidebar links.
  */
-function NavIcon({
+const NavIcon = ({
   name,
 }: {
   name: "grid" | "users" | "spark" | "profile";
-}) {
+}) => {
   const cls = "h-5 w-5 shrink-0";
   if (name === "grid") {
     return (
@@ -86,12 +86,12 @@ function NavIcon({
       />
     </svg>
   );
-}
+};
 
 /**
  * Section jump links scoped to admins vs regular members.
  */
-export function DashboardSidebarNav() {
+export const DashboardSidebarNav = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const items = isAdmin ? adminLinks : memberLinks;
@@ -110,4 +110,4 @@ export function DashboardSidebarNav() {
       ))}
     </nav>
   );
-}
+};

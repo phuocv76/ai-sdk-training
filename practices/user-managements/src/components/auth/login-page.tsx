@@ -16,7 +16,7 @@ import { useAuth } from "@/components/providers/auth-session-provider";
 /**
  * Sign-in / sign-up form that posts to auth routes and redirects on success.
  */
-export function LoginPage() {
+export const LoginPage = () => {
   const router = useRouter();
   const { refresh } = useAuth();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
@@ -27,7 +27,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
 
   /** Submits credentials to `signup` or `login`, then refreshes session and redirects home. */
-  async function onSubmit(e: React.FormEvent) {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setBusy(true);
@@ -66,7 +66,7 @@ export function LoginPage() {
     } finally {
       setBusy(false);
     }
-  }
+  };
 
   return (
     <div className="flex min-h-full flex-1 flex-col items-center justify-center bg-[var(--background)] px-4 py-12">
@@ -206,4 +206,4 @@ export function LoginPage() {
       </div>
     </div>
   );
-}
+};

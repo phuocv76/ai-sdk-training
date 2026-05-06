@@ -5,10 +5,10 @@ import { UserDashboard } from "@/components/dashboard/user-dashboard";
 /**
  * Signed-in dashboard: directory, profile, and chat assistant.
  */
-export default function Home() {
-  return (
-    <DashboardShell>
-      <UserDashboard />
-    </DashboardShell>
-  );
-}
+const Home = () => (
+  <DashboardShell>
+    <UserDashboard />
+  </DashboardShell>
+);
+
+export default Home;

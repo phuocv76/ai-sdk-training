@@ -17,8 +17,8 @@ import {
   PROFILE_UI_MESSAGES,
   UI_SYMBOLS,
 } from "@/constants/messages";
-import { renderInlineMarkdownBold } from "@/lib/render-inline-markdown-bold";
-import { displayName, type ClientUser } from "@/lib/users";
+import { type ClientUser, displayName } from "@/lib/domain/user";
+import { renderInlineMarkdownBold } from "@/lib/markdown/render-inline-markdown-bold";
 
 type AssistantToolPart = ToolUIPart | DynamicToolUIPart;
 

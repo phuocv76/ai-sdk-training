@@ -21,11 +21,11 @@ const OpenAiApiKeyContext = createContext<OpenAiApiKeyContextValue | null>(
 );
 
 /** Supplies per-tab OpenAI API key state to the dashboard shell and chat client. */
-export function OpenAiApiKeyProvider({
+export const OpenAiApiKeyProvider = ({
   children,
 }: {
   children: React.ReactNode;
-}) {
+}) => {
   const [apiKey, setApiKeyState] = useState("");
   const setApiKey = useCallback((value: string) => {
     setApiKeyState(value);
@@ -41,12 +41,12 @@ export function OpenAiApiKeyProvider({
       {children}
     </OpenAiApiKeyContext.Provider>
   );
-}
+};
 
 /**
  * Accesses the masked API key mirrored into `x-openai-api-key` on chat transport.
  */
-export function useOpenAiApiKey() {
+export const useOpenAiApiKey = () => {
   const ctx = useContext(OpenAiApiKeyContext);
   if (!ctx) {
     throw new Error(
@@ -54,12 +54,12 @@ export function useOpenAiApiKey() {
     );
   }
   return ctx;
-}
+};
 
 /**
  * Sidebar control: masked OpenAI key sent with chat requests when non-empty.
  */
-export function OpenAiApiKeyField() {
+export const OpenAiApiKeyField = () => {
   const { apiKey, setApiKey } = useOpenAiApiKey();
 
   return (
@@ -90,4 +90,4 @@ export function OpenAiApiKeyField() {
       </p>
     </div>
   );
-}
+};

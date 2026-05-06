@@ -3,12 +3,11 @@ import { NextResponse } from "next/server";
 // Constants
 import { API_MESSAGES } from "@/constants/messages";
 
-// Libraries
 import {
   requireDatabase,
   resolveSessionUser,
-} from "@/lib/auth-cookies";
-import { listUsers } from "@/lib/users";
+} from "@/server/auth/cookies";
+import { listUsers } from "@/server/users/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +15,7 @@ export const dynamic = "force-dynamic";
  * Lists all users (admin only).
  * @returns `{ users }` or `{ error }` with appropriate HTTP status.
  */
-export async function GET() {
+export const GET = async () => {
   const dbCtx = await requireDatabase();
   if ("error" in dbCtx) {
     return NextResponse.json({ error: dbCtx.error }, { status: dbCtx.status });
@@ -44,4 +43,4 @@ export async function GET() {
       e instanceof Error ? e.message : API_MESSAGES.UNKNOWN_ERROR;
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+};

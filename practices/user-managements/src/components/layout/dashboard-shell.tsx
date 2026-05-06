@@ -19,7 +19,11 @@ import {
 /**
  * Dashboard chrome: sidebar, top bar, OpenAI key field, and main content slot.
  */
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export const DashboardShell = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
   return (
     <OpenAiApiKeyProvider>
       <div className="flex min-h-screen bg-[var(--background)] text-[var(--foreground)]">
@@ -89,4 +93,4 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </div>
     </OpenAiApiKeyProvider>
   );
-}
+};

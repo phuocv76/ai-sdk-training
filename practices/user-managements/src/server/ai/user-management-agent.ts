@@ -1,5 +1,5 @@
 // External libraries
-import { ToolLoopAgent, stepCountIs, tool, type LanguageModel } from 'ai';
+import { ToolLoopAgent, stepCountIs, tool, type LanguageModel } from "ai";
 
 // Constants
 import {
@@ -8,9 +8,19 @@ import {
   CHAT_TOOL_MESSAGES,
   USER_DOMAIN_ERRORS,
   chatMemberSystemPrompt,
-} from '@/constants/messages';
+} from "@/constants/messages";
 
-// Libraries
+// Domain
+import { userResponseBody, type User } from "@/lib/domain/user";
+import {
+  createUserToolInputSchema,
+  emptyObjectSchema,
+  updateMyProfileToolInputSchema,
+  updateUserToolInputSchema,
+  userIdPayloadSchema,
+} from "@/lib/schemas/user-management-schemas";
+
+// Server
 import {
   createUser,
   deleteUser,
@@ -18,16 +28,7 @@ import {
   listUsers,
   updateMemberProfile,
   updateUser,
-  userResponseBody,
-  type User,
-} from '@/lib/users';
-import {
-  createUserToolInputSchema,
-  emptyObjectSchema,
-  updateMyProfileToolInputSchema,
-  updateUserToolInputSchema,
-  userIdPayloadSchema,
-} from '@/lib/user-management-schemas';
+} from "@/server/users/repository";
 
 /** Result envelope for confirmation-aware tool workflows. */
 type WorkflowResult<T> =
@@ -45,16 +46,16 @@ type WorkflowResult<T> =
 /** Detects whether the latest user message explicitly approves an action. */
 const isHumanConfirmation = (text: string): boolean => {
   const normalized = text.trim().toLowerCase();
-  const alphaOnly = normalized.replace(/[^a-z]/g, '');
+  const alphaOnly = normalized.replace(/[^a-z]/g, "");
   if (!normalized) return false;
   const looksLikeApprove = /^a+p+r+o+v+e+$/.test(alphaOnly);
   return (
-    normalized.includes('confirm') ||
-    normalized.includes('approve') ||
+    normalized.includes("confirm") ||
+    normalized.includes("approve") ||
     looksLikeApprove ||
-    normalized.includes('yes, proceed') ||
-    normalized === 'yes' ||
-    normalized === 'ok'
+    normalized.includes("yes, proceed") ||
+    normalized === "yes" ||
+    normalized === "ok"
   );
 };
 
@@ -108,7 +109,7 @@ export const createUserManagementAgent = ({
 }: {
   model: LanguageModel;
   db: D1Database;
-  me: Pick<User, 'id' | 'name' | 'role'>;
+  me: Pick<User, "id" | "name" | "role">;
   latestText: string;
 }) => {
   const memberTools = {
@@ -126,7 +127,7 @@ export const createUserManagementAgent = ({
       execute: async (input) => {
         const workflow = createHumanInLoopWorkflow(
           latestText,
-          'updateMyProfile',
+          "updateMyProfile",
         );
         const result = await workflow(input, async () => {
           const patch: {
@@ -137,7 +138,7 @@ export const createUserManagementAgent = ({
           if (input.name !== undefined) patch.name = input.name;
           if (input.date_of_birth !== undefined) {
             patch.date_of_birth =
-              input.date_of_birth === '' || input.date_of_birth === null
+              input.date_of_birth === "" || input.date_of_birth === null
                 ? null
                 : input.date_of_birth;
           }
@@ -147,7 +148,7 @@ export const createUserManagementAgent = ({
           return userResponseBody(user);
         });
         if (!result.ok) {
-          if ('requiresConfirmation' in result) return result;
+          if ("requiresConfirmation" in result) return result;
           return { ok: false as const, error: result.error };
         }
         return { ok: true as const, user: result.data };
@@ -182,10 +183,10 @@ export const createUserManagementAgent = ({
       description: CHAT_TOOL_MESSAGES.CREATE_USER,
       inputSchema: createUserToolInputSchema,
       execute: async (input) => {
-        const workflow = createHumanInLoopWorkflow(latestText, 'createUser');
+        const workflow = createHumanInLoopWorkflow(latestText, "createUser");
         const result = await workflow(input, async () => createUser(db, input));
         if (!result.ok) {
-          if ('requiresConfirmation' in result) return result;
+          if ("requiresConfirmation" in result) return result;
           return { ok: false as const, error: result.error };
         }
         return { ok: true as const, user: result.data };
@@ -197,7 +198,7 @@ export const createUserManagementAgent = ({
       execute: async (input) => {
         try {
           const { id, ...fields } = input;
-          if (fields.status === 'inactive' && id === me.id) {
+          if (fields.status === "inactive" && id === me.id) {
             throw new Error(API_MESSAGES.CANNOT_DEACTIVATE_SELF_ACCOUNT);
           }
           const user = await updateUser(db, {
@@ -209,7 +210,7 @@ export const createUserManagementAgent = ({
             ...(fields.date_of_birth !== undefined
               ? {
                   date_of_birth:
-                    fields.date_of_birth === '' || fields.date_of_birth === null
+                    fields.date_of_birth === "" || fields.date_of_birth === null
                       ? null
                       : fields.date_of_birth,
                 }
@@ -229,13 +230,13 @@ export const createUserManagementAgent = ({
       description: CHAT_TOOL_MESSAGES.DELETE_USER,
       inputSchema: userIdPayloadSchema,
       execute: async (input) => {
-        const workflow = createHumanInLoopWorkflow(latestText, 'deleteUser');
+        const workflow = createHumanInLoopWorkflow(latestText, "deleteUser");
         const result = await workflow(input, async () => {
           const { deleted } = await deleteUser(db, input.id);
           return { ok: deleted, id: input.id };
         });
         if (!result.ok) {
-          if ('requiresConfirmation' in result) return result;
+          if ("requiresConfirmation" in result) return result;
           return { ok: false as const, error: result.error };
         }
         return result.data;
@@ -243,9 +244,9 @@ export const createUserManagementAgent = ({
     }),
   } as const;
 
-  const tools = me.role === 'admin' ? adminTools : memberTools;
+  const tools = me.role === "admin" ? adminTools : memberTools;
   const instructions =
-    me.role === 'admin'
+    me.role === "admin"
       ? CHAT_SYSTEM_PROMPTS.ADMIN
       : chatMemberSystemPrompt(me.name);
 

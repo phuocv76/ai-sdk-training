@@ -3,18 +3,20 @@ import { NextResponse } from "next/server";
 // Constants
 import { API_MESSAGES } from "@/constants/messages";
 
-// Libraries
+// Domain
+import { userResponseBody } from "@/lib/domain/user";
+import { loginBodySchema } from "@/lib/schemas/user-management-schemas";
+// Server
 import {
   requireDatabase,
   resolveSessionUser,
   SESSION_COOKIE,
   SESSION_COOKIE_SETTINGS,
   SESSION_MAX_AGE_SEC,
-} from "@/lib/auth-cookies";
-import { verifyPassword } from "@/lib/password";
-import { createSession } from "@/lib/sessions";
-import { loginBodySchema } from "@/lib/user-management-schemas";
-import { getUserWithSecret, userResponseBody } from "@/lib/users";
+} from "@/server/auth/cookies";
+import { verifyPassword } from "@/server/auth/password";
+import { createSession } from "@/server/auth/sessions";
+import { getUserWithSecret } from "@/server/users/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,7 @@ export const dynamic = "force-dynamic";
  * Validates credentials and issues a signed session cookie (`um_session`).
  * @returns JSON `{ ok, user }` on success, or `{ error }` with 4xx status.
  */
-export async function POST(req: Request) {
+export const POST = async (req: Request) => {
   const parsed = loginBodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
@@ -81,4 +83,4 @@ export async function POST(req: Request) {
       { status: 401 },
     );
   }
-}
+};

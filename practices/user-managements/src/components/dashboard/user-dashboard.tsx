@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 // Components
 import { AssistantChatPopup } from "@/components/assistant/assistant-chat-popup";
@@ -22,53 +22,48 @@ import {
 } from "@/constants/messages";
 
 // Libraries
-import { displayName } from "@/lib/users";
-import type { User } from "@/lib/users";
+import { displayName, type User } from "@/lib/domain/user";
 
 /** Formats a millisecond epoch for table “joined” cells in the viewer locale. */
-function formatTime(ts: number) {
-  return new Date(ts).toLocaleString(undefined, {
+const formatTime = (ts: number) =>
+  new Date(ts).toLocaleString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-/** Avatar initials derived from the resolved display name. */
-function initialsFromUser(u: Pick<User, "name">) {
-  return initials(displayName(u));
-}
 
 /** Up to two letters for avatar chips; falls back to `UI_SYMBOLS.UNKNOWN_INITIAL`. */
-function initials(name: string) {
+const initials = (name: string) => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return UI_SYMBOLS.UNKNOWN_INITIAL;
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
-}
+};
+
+/** Avatar initials derived from the resolved display name. */
+const initialsFromUser = (u: Pick<User, "name">) =>
+  initials(displayName(u));
 
 /**
  * Deterministic HSL gradient from an arbitrary seed string (typically user id).
  * @param seed Stable per-user identifier used only for hashing hue.
  */
-function avatarGradient(seed: string) {
+const avatarGradient = (seed: string) => {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = seed.charCodeAt(i) + ((h << 5) - h);
   const hue = Math.abs(h) % 360;
   return `linear-gradient(135deg, hsl(${hue}, 65%, 58%) 0%, hsl(${(hue + 40) % 360}, 70%, 45%) 100%)`;
-}
+};
 
 /**
  * Main authenticated experience: stats, optional admin directory, streaming chat.
  */
-export function UserDashboard() {
+export const UserDashboard = () => {
   const { user: currentUser, refresh } = useAuth();
   const isAdmin = currentUser?.role === "admin";
   const { apiKey: openAiApiKey } = useOpenAiApiKey();
-  const openAiApiKeyRef = useRef(openAiApiKey);
-  openAiApiKeyRef.current = openAiApiKey;
 
   const chatTransport = useMemo(
     () =>
@@ -76,17 +71,19 @@ export function UserDashboard() {
         fetch: (input, init) =>
           fetch(input, { ...init, credentials: "include" }),
         headers: () => {
-          const k = openAiApiKeyRef.current.trim();
+          const k = openAiApiKey.trim();
           const headers: Record<string, string> = {};
           if (k) headers[REQUEST_HEADERS.OPENAI_API_KEY_OVERRIDE] = k;
           return headers;
         },
       }),
-    [],
+    [openAiApiKey],
   );
 
   const [users, setUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(
+    () => currentUser?.role === "admin",
+  );
   const [usersError, setUsersError] = useState<string | null>(null);
   const [profileDetailOpen, setProfileDetailOpen] = useState(false);
   const [profileDetailLoading, setProfileDetailLoading] = useState(false);
@@ -124,13 +121,10 @@ export function UserDashboard() {
   }, [isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin) {
-      setLoadingUsers(false);
-      setUsers([]);
-      setUsersError(null);
-      return;
-    }
-    void loadUsers();
+    if (!isAdmin) return;
+    startTransition(() => {
+      void loadUsers();
+    });
   }, [isAdmin, loadUsers]);
 
   /** Loads the latest row for the profile drawer, ignoring stale responses. */
@@ -160,20 +154,20 @@ export function UserDashboard() {
   }, []);
 
   /** Opens the modal and hydrates from cache + network. */
-  function openProfileForUser(user: User) {
+  const openProfileForUser = (user: User) => {
     profileDetailSelectionRef.current = user.id;
     setProfileDetailUser(user);
     setProfileDetailOpen(true);
     void loadProfileDetail(user.id);
-  }
+  };
 
   /** Clears selection and closes the modal. */
-  function closeProfileDetail() {
+  const closeProfileDetail = () => {
     profileDetailSelectionRef.current = null;
     setProfileDetailOpen(false);
     setProfileDetailUser(null);
     setProfileDetailLoading(false);
-  }
+  };
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -188,12 +182,12 @@ export function UserDashboard() {
   }, [users, search]);
 
   /** After an assistant turn, refresh session, directory, and any open profile. */
-  async function refreshAfterChat() {
+  const refreshAfterChat = async () => {
     await refresh();
     if (isAdmin) void loadUsers();
     const selId = profileDetailSelectionRef.current;
     if (selId && profileDetailOpen) void loadProfileDetail(selId);
-  }
+  };
 
   const { messages, sendMessage, status, error } = useChat({
     transport: chatTransport,
@@ -205,13 +199,13 @@ export function UserDashboard() {
   const busy = status === "streaming" || status === "submitted";
 
   /** Sends the composer text as the next user message when not busy. */
-  async function onSubmit(e: React.FormEvent) {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
     if (!text || busy) return;
     setInput("");
     await sendMessage({ text });
-  }
+  };
 
   const chatSubtitle = isAdmin ?
     DASHBOARD_MESSAGES.ADMIN_CHAT_SUBTITLE
@@ -501,4 +495,4 @@ export function UserDashboard() {
       />
     </div>
   );
-}
+};

@@ -6,10 +6,10 @@ export const metadata: Metadata = {
   description: "Swagger UI for the user-management JSON APIs.",
 };
 
-export default function DocsLayout({
+const DocsLayout = ({
   children,
 }: {
   children: ReactNode;
-}) {
-  return children;
-}
+}) => children;
+
+export default DocsLayout;

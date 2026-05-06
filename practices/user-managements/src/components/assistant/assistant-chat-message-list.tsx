@@ -12,9 +12,8 @@ import {
 import { DASHBOARD_MESSAGES } from '@/constants/messages';
 
 // Libraries
-import { renderInlineMarkdownBold } from '@/lib/render-inline-markdown-bold';
-import { displayName } from '@/lib/users';
-import type { User } from '@/lib/users';
+import { displayName, type User } from "@/lib/domain/user";
+import { renderInlineMarkdownBold } from "@/lib/markdown/render-inline-markdown-bold";
 
 type ChatMessage = {
   id: string;

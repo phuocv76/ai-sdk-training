@@ -9,11 +9,10 @@ import {
 } from "@/constants/messages";
 
 // Libraries
-import { displayName } from "@/lib/users";
-import type { User } from "@/lib/users";
+import { displayName, type User } from "@/lib/domain/user";
 
 /** Formats ISO date-only strings for display or returns the sentinel em dash when empty. */
-function formatDob(iso: string | null) {
+const formatDob = (iso: string | null) => {
   if (!iso) return UI_SYMBOLS.EM_DASH;
   const d = new Date(`${iso}T12:00:00`);
   if (Number.isNaN(d.getTime())) return iso;
@@ -22,43 +21,40 @@ function formatDob(iso: string | null) {
     month: "short",
     day: "numeric",
   });
-}
+};
 
 /** Absolute `created_at` millisecond epoch rendered in the viewer locale. */
-function formatJoined(ts: number) {
-  return new Date(ts).toLocaleString(undefined, {
+const formatJoined = (ts: number) =>
+  new Date(ts).toLocaleString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
-}
 
 /** Label + definition pair for `<dl>` style profile rows. */
-function Field({
+const Field = ({
   label,
   children,
 }: {
   label: string;
   children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1">
-      <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--dash-muted)]">
-        {label}
-      </dt>
-      <dd className="text-sm text-[var(--foreground)]">{children}</dd>
-    </div>
-  );
-}
+}) => (
+  <div className="space-y-1">
+    <dt className="text-[11px] font-semibold uppercase tracking-wide text-[var(--dash-muted)]">
+      {label}
+    </dt>
+    <dd className="text-sm text-[var(--foreground)]">{children}</dd>
+  </div>
+);
 
 /** Read-only rendering of canonical profile fields plus role / join metadata. */
-export function ProfileFieldsDisplay({
+export const ProfileFieldsDisplay = ({
   user,
   variant = "default",
 }: {
   user: User;
   variant?: "default" | "compact";
-}) {
+}) => {
   const cls =
     variant === "compact"
       ? "grid gap-4 sm:grid-cols-2"
@@ -105,12 +101,12 @@ export function ProfileFieldsDisplay({
       </div>
     </dl>
   );
-}
+};
 
 /**
  * Modal-style drawer for a single user’s directory record (admin table drill-in).
  */
-export function UserProfileModal({
+export const UserProfileModal = ({
   open,
   user,
   loading,
@@ -120,7 +116,7 @@ export function UserProfileModal({
   user: User | null;
   loading: boolean;
   onClose: () => void;
-}) {
+}) => {
   if (!open) return null;
 
   return (
@@ -178,4 +174,4 @@ export function UserProfileModal({
       </div>
     </div>
   );
-}
+};

@@ -7,22 +7,22 @@ import { useAuth } from "@/components/providers/auth-session-provider";
 import { ACCOUNT_MESSAGES, UI_SYMBOLS } from "@/constants/messages";
 
 // Libraries
-import { displayName } from "@/lib/users";
+import { displayName } from "@/lib/domain/user";
 
 /** Two-letter initials from whitespace-separated words, or `UI_SYMBOLS.UNKNOWN_INITIAL`. */
-function initials(name: string) {
+const initials = (name: string) => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return UI_SYMBOLS.UNKNOWN_INITIAL;
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
   return (
     parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)
   ).toUpperCase();
-}
+};
 
 /**
  * Compact signed-in summary shown in the desktop sidebar footer.
  */
-export function DashboardAccountSummary() {
+export const DashboardAccountSummary = () => {
   const { user } = useAuth();
   if (!user) return null;
   return (
@@ -50,12 +50,12 @@ export function DashboardAccountSummary() {
       </div>
     </div>
   );
-}
+};
 
 /**
  * Toolbar sign-out triggers plus avatar initials for narrow and wide breakpoints.
  */
-export function DashboardUserMenu() {
+export const DashboardUserMenu = () => {
   const { user, logout } = useAuth();
 
   if (!user) return null;
@@ -85,4 +85,4 @@ export function DashboardUserMenu() {
       </div>
     </div>
   );
-}
+};

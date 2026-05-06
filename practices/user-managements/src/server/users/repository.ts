@@ -1,23 +1,13 @@
 // Constants
-import { UI_SYMBOLS, USER_DOMAIN_ERRORS } from "@/constants/messages";
+import { USER_DOMAIN_ERRORS } from "@/constants/messages";
 
-// Libraries
-import { hashPassword } from "@/lib/password";
+// Domain
+import type { User, UserRole, UserStatus } from "@/lib/domain/user";
 
-export type UserRole = "admin" | "member";
-export type UserStatus = "active" | "inactive";
+// Server
+import { hashPassword } from "@/server/auth/password";
+
 const DEFAULT_NEW_USER_PASSWORD = "Abcd@123";
-
-export type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  status: UserStatus;
-  created_at: number;
-  date_of_birth: string | null;
-  bio: string | null;
-};
 
 /**
  * Maps a raw role string from storage to the supported `UserRole` union.
@@ -30,7 +20,7 @@ const normalizeRole = (role: string): UserRole =>
 /**
  * Maps stored status text to `UserStatus` (defaults unknown values to active).
  */
-export const normalizeUserStatus = (raw: string): UserStatus => {
+const normalizeUserStatus = (raw: string): UserStatus => {
   const s = raw.trim().toLowerCase();
   return s === "inactive" ? "inactive" : "active";
 };
@@ -55,15 +45,6 @@ const mapPrismaUser = (row: UserAttrs): User => ({
   date_of_birth: row.date_of_birth ?? null,
   bio: row.bio ?? null,
 });
-
-/**
- * Display name from canonical `name`, or a placeholder when blank.
- * @param user Subset with `name`.
- */
-export const displayName = (user: Pick<User, "name">): string => {
-  const n = user.name.trim();
-  return n || UI_SYMBOLS.UNKNOWN_INITIAL;
-};
 
 /**
  * Applies trim / empty-string-to-null semantics for optional profile PATCH fields.
@@ -333,20 +314,3 @@ export const deleteUser = async (
   const result = await db.prepare("DELETE FROM users WHERE id = ?1").bind(id).run();
   return { deleted: Number(result.meta.changes ?? 0) > 0 };
 };
-
-/**
- * JSON-safe user payload for APIs and chat tools (no secrets).
- * @param user Domain user record.
- */
-export const userResponseBody = (user: User) => ({
-  id: user.id,
-  name: user.name,
-  email: user.email,
-  role: user.role,
-  status: user.status,
-  created_at: user.created_at,
-  date_of_birth: user.date_of_birth,
-  bio: user.bio,
-});
-
-export type ClientUser = ReturnType<typeof userResponseBody>;

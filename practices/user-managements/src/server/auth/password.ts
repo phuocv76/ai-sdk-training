@@ -1,10 +1,10 @@
-import { compare, genSalt, hash } from 'bcrypt';
+import { compare, genSalt, hash } from "bcrypt";
 
 /** Cost factor for new password hashes. */
 const BCRYPT_ROUNDS = 12;
 
 /** Legacy PBKDF2-SHA256 encoding (verify-only for existing rows). */
-const LEGACY_PREFIX = 'pbkdf2-sha256';
+const LEGACY_PREFIX = "pbkdf2-sha256";
 
 const b64decode = (s: string): Uint8Array => {
   const bin = atob(s);
@@ -20,16 +20,16 @@ const derive = async (
 ): Promise<Uint8Array> => {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
-    'raw',
+    "raw",
     enc.encode(password),
-    'PBKDF2',
+    "PBKDF2",
     false,
-    ['deriveBits'],
+    ["deriveBits"],
   );
   const bits = await crypto.subtle.deriveBits(
     {
-      name: 'PBKDF2',
-      hash: 'SHA-256',
+      name: "PBKDF2",
+      hash: "SHA-256",
       salt: salt.buffer.slice(
         salt.byteOffset,
         salt.byteOffset + salt.byteLength,
@@ -46,7 +46,7 @@ const verifyLegacyPbkdf2 = async (
   password: string,
   stored: string,
 ): Promise<boolean> => {
-  const parts = stored.split(':');
+  const parts = stored.split(":");
   if (parts.length !== 4) return false;
   const [, iterRaw, saltB64, hashB64] = parts;
   const iterations = Number(iterRaw);
@@ -94,7 +94,7 @@ export const verifyPassword = async (
 ): Promise<boolean> => {
   if (!stored) return false;
 
-  if (stored.startsWith('$2')) {
+  if (stored.startsWith("$2")) {
     try {
       return await compare(password, stored);
     } catch {

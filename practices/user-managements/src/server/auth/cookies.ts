@@ -4,9 +4,11 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 // Constants
 import { DATABASE_MESSAGES } from "@/constants/messages";
 
-// Libraries
-import { getUserForSession } from "@/lib/sessions";
-import type { User } from "@/lib/users";
+// Domain
+import type { User } from "@/lib/domain/user";
+
+// Server
+import { getUserForSession } from "@/server/auth/sessions";
 
 export const SESSION_COOKIE = "um_session";
 

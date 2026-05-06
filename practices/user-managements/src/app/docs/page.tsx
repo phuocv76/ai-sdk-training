@@ -6,7 +6,7 @@ import SwaggerUIStandalonePreset from "swagger-ui-dist/swagger-ui-standalone-pre
 
 import "swagger-ui-dist/swagger-ui.css";
 
-export default function ApiDocsPage() {
+const ApiDocsPage = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -30,4 +30,6 @@ export default function ApiDocsPage() {
       <div ref={containerRef} />
     </div>
   );
-}
+};
+
+export default ApiDocsPage;
