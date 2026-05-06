@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { getToolName, isToolUIPart } from "ai";
 import type {
   DynamicToolUIPart,
@@ -19,12 +21,7 @@ import { displayName, type ClientUser } from "@/lib/users";
 
 type AssistantToolPart = ToolUIPart | DynamicToolUIPart;
 
-/** Parses `{ ok: true, user }` from createUser / updateUser tool output. */
-function parseOkUserToolOutput(output: unknown): ClientUser | null {
-  if (!output || typeof output !== "object") return null;
-  const o = output as Record<string, unknown>;
-  if (o.ok !== true) return null;
-  const u = o.user;
+function tryParseClientUser(u: unknown): ClientUser | null {
   if (!u || typeof u !== "object") return null;
   const user = u as Record<string, unknown>;
   if (
@@ -40,25 +37,29 @@ function parseOkUserToolOutput(output: unknown): ClientUser | null {
   return u as ClientUser;
 }
 
+/** Parses `{ profile }` from getMyProfile tool output. */
+function parseGetMyProfileToolOutput(output: unknown): ClientUser | null {
+  if (!output || typeof output !== "object") return null;
+  return tryParseClientUser((output as Record<string, unknown>).profile);
+}
+
+/** Parses `{ ok: true, user }` from createUser / updateUser tool output. */
+function parseOkUserToolOutput(output: unknown): ClientUser | null {
+  if (!output || typeof output !== "object") return null;
+  const o = output as Record<string, unknown>;
+  if (o.ok !== true) return null;
+  return tryParseClientUser(o.user);
+}
+
 function parseListUsersToolOutput(output: unknown): ClientUser[] | null {
   if (!output || typeof output !== "object") return null;
   const raw = (output as Record<string, unknown>).users;
   if (!Array.isArray(raw)) return null;
   const users: ClientUser[] = [];
   for (const item of raw) {
-    if (!item || typeof item !== "object") return null;
-    const user = item as Record<string, unknown>;
-    if (
-      typeof user.id !== "string" ||
-      typeof user.name !== "string" ||
-      typeof user.email !== "string" ||
-      typeof user.created_at !== "number" ||
-      typeof user.role !== "string" ||
-      (user.status !== "active" && user.status !== "inactive")
-    ) {
-      return null;
-    }
-    users.push(item as ClientUser);
+    const parsed = tryParseClientUser(item);
+    if (!parsed) return null;
+    users.push(parsed);
   }
   return users;
 }
@@ -67,6 +68,35 @@ function toolInputIsNonEmpty(input: unknown): boolean {
   if (input == null) return false;
   if (typeof input !== "object") return true;
   return Object.keys(input as object).length > 0;
+}
+
+function ToolPendingCard({
+  title,
+  state,
+  message,
+  input,
+  showInput,
+}: {
+  title: string;
+  state: string;
+  message: ReactNode;
+  input?: unknown;
+  showInput: boolean;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed border-[var(--dash-border)] bg-[var(--background)]/80 px-3 py-3 text-sm text-[var(--dash-muted)]">
+      <p className="font-mono text-[11px] font-semibold text-[var(--foreground)]">
+        {title}{" "}
+        <span className="font-normal opacity-70">({state})</span>
+      </p>
+      <p className="mt-1 text-xs">{message}</p>
+      {showInput ?
+        <pre className="mt-2 max-h-32 overflow-auto font-mono text-[11px] text-[var(--foreground)]">
+          {JSON.stringify(input, null, 2)}
+        </pre>
+      : null}
+    </div>
+  );
 }
 
 /**
@@ -79,10 +109,18 @@ export function assistantMessageShouldHideProseForDirectoryResultCard(
     if (!isToolUIPart(raw as UIMessagePart<UIDataTypes, UITools>)) continue;
     const part = raw as ToolUIPart | DynamicToolUIPart;
     const toolName = getToolName(part);
-    if (toolName !== "createUser" && toolName !== "updateUser") continue;
     if (part.state !== "output-available") continue;
     const out = "output" in part ? part.output : undefined;
-    if (parseOkUserToolOutput(out)) return true;
+    if (
+      toolName === "createUser" ||
+      toolName === "updateUser" ||
+      toolName === "updateMyProfile"
+    ) {
+      if (parseOkUserToolOutput(out)) return true;
+    }
+    if (toolName === "getMyProfile" && parseGetMyProfileToolOutput(out)) {
+      return true;
+    }
   }
   return false;
 }
@@ -114,7 +152,7 @@ function UserResultCard({
   variant,
 }: {
   user: ClientUser;
-  variant: "invited" | "updated";
+  variant: "invited" | "updated" | "profile-loaded" | "profile-updated";
 }) {
   const initials = initialsFromName(user.name);
   const dobDisplay =
@@ -125,20 +163,28 @@ function UserResultCard({
   const badge =
     variant === "invited" ?
       DASHBOARD_MESSAGES.MEMBER_INVITED_CARD_BADGE
-    : DASHBOARD_MESSAGES.USER_UPDATED_CARD_BADGE;
+    : variant === "updated" ?
+      DASHBOARD_MESSAGES.USER_UPDATED_CARD_BADGE
+    : variant === "profile-loaded" ?
+      DASHBOARD_MESSAGES.MEMBER_PROFILE_CARD_BADGE
+    : DASHBOARD_MESSAGES.MEMBER_PROFILE_UPDATED_CARD_BADGE;
   const badgeClass =
-    variant === "invited" ?
+    variant === "invited" || variant === "profile-loaded" ?
       "text-sky-600 dark:text-sky-400"
     : "text-violet-600 dark:text-violet-400";
   const shellClass =
-    variant === "invited" ?
+    variant === "invited" || variant === "profile-loaded" ?
       "from-sky-50 to-[var(--dash-card)] dark:from-sky-950/35"
     : "from-violet-50 to-[var(--dash-card)] dark:from-violet-950/35";
 
   const successLine =
     variant === "invited" ?
       DASHBOARD_MESSAGES.MEMBER_INVITED_SUCCESS_LINE
-    : DASHBOARD_MESSAGES.USER_UPDATED_SUCCESS_LINE;
+    : variant === "updated" ?
+      DASHBOARD_MESSAGES.USER_UPDATED_SUCCESS_LINE
+    : variant === "profile-loaded" ?
+      DASHBOARD_MESSAGES.MEMBER_PROFILE_LOADED_SUCCESS_LINE
+    : DASHBOARD_MESSAGES.MEMBER_PROFILE_UPDATED_SUCCESS_LINE;
 
   const bioTrimmed = user.bio?.trim();
 
@@ -175,9 +221,9 @@ function UserResultCard({
                 {PROFILE_UI_MESSAGES.ROLE_LABEL}
               </span>
               <span
-                className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${user.role === "admin"
+                className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase leading-none ${user.role === "admin"
                     ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
-                    : "text-[var(--foreground)]"
+                    : "bg-[var(--foreground)]/10 text-[var(--foreground)]"
                   }`}
               >
                 {user.role === "admin" ?
@@ -271,44 +317,52 @@ function UserDirectoryToolDisplay({
   part,
   pendingMessage,
   cardVariant,
+  parseOutput = parseOkUserToolOutput,
+  pendingShowInputPreview = true,
+  failedFallback,
 }: {
   part: AssistantToolPart;
   pendingMessage: string;
-  cardVariant: "invited" | "updated";
+  cardVariant: "invited" | "updated" | "profile-loaded" | "profile-updated";
+  parseOutput?: (output: unknown) => ClientUser | null;
+  pendingShowInputPreview?: boolean;
+  failedFallback?: ReactNode;
 }) {
   const title = getToolName(part);
   const state =
     "state" in part && typeof part.state === "string" ? part.state : "";
+  const input = "input" in part ? part.input : undefined;
 
   if (state !== "output-available") {
     return (
-      <div className="rounded-xl border border-dashed border-[var(--dash-border)] bg-[var(--background)]/80 px-3 py-3 text-sm text-[var(--dash-muted)]">
-        <p className="font-mono text-[11px] font-semibold text-[var(--foreground)]">
-          {title}{" "}
-          <span className="font-normal opacity-70">({state})</span>
-        </p>
-        <p className="mt-1 text-xs">{pendingMessage}</p>
-        {"input" in part && part.input != null ? (
-          <pre className="mt-2 max-h-32 overflow-auto font-mono text-[11px] text-[var(--foreground)]">
-            {JSON.stringify(part.input, null, 2)}
-          </pre>
-        ) : null}
-      </div>
+      <ToolPendingCard
+        title={title}
+        state={state}
+        message={pendingMessage}
+        input={input}
+        showInput={
+          pendingShowInputPreview && ("input" in part && part.input != null)
+        }
+      />
     );
   }
 
   const output = "output" in part ? part.output : undefined;
-  const user = parseOkUserToolOutput(output);
+  const user = parseOutput(output);
 
   if (user) {
     return <UserResultCard user={user} variant={cardVariant} />;
+  }
+
+  if (failedFallback !== undefined) {
+    return failedFallback;
   }
 
   return (
     <GenericToolBlock
       title={title}
       state={state}
-      input={"input" in part ? part.input : undefined}
+      input={input}
       output={output}
     />
   );
@@ -336,6 +390,42 @@ export function UpdateUserToolDisplay({ part }: { part: AssistantToolPart }) {
   );
 }
 
+/** Rich UI for successful `updateMyProfile` (same `{ ok, user }` payload as updateUser). */
+export function UpdateMyProfileToolDisplay({
+  part,
+}: {
+  part: AssistantToolPart;
+}) {
+  return (
+    <UserDirectoryToolDisplay
+      part={part}
+      pendingMessage={DASHBOARD_MESSAGES.UPDATE_MY_PROFILE_TOOL_PENDING}
+      cardVariant="profile-updated"
+    />
+  );
+}
+
+/** Member profile card for `getMyProfile` (`{ profile }` payload). */
+export function GetMyProfileToolDisplay({ part }: { part: AssistantToolPart }) {
+  return (
+    <UserDirectoryToolDisplay
+      part={part}
+      pendingMessage={DASHBOARD_MESSAGES.GET_MY_PROFILE_TOOL_PENDING}
+      cardVariant="profile-loaded"
+      parseOutput={parseGetMyProfileToolOutput}
+      pendingShowInputPreview={false}
+      failedFallback={
+        <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-4 text-sm text-[var(--dash-muted)] shadow-sm">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dash-muted)]">
+            {DASHBOARD_MESSAGES.MEMBER_PROFILE_CARD_BADGE}
+          </p>
+          <p className="mt-2">{PROFILE_UI_MESSAGES.PROFILE_LOAD_FAILED}</p>
+        </div>
+      }
+    />
+  );
+}
+
 /** Compact directory table for `listUsers` — hides raw JSON payloads. */
 export function ListUsersToolDisplay({ part }: { part: AssistantToolPart }) {
   const title = getToolName(part);
@@ -345,18 +435,13 @@ export function ListUsersToolDisplay({ part }: { part: AssistantToolPart }) {
   if (state !== "output-available") {
     const input = "input" in part ? part.input : undefined;
     return (
-      <div className="rounded-xl border border-dashed border-[var(--dash-border)] bg-[var(--background)]/80 px-3 py-3 text-sm text-[var(--dash-muted)]">
-        <p className="font-mono text-[11px] font-semibold text-[var(--foreground)]">
-          {title}{" "}
-          <span className="font-normal opacity-70">({state})</span>
-        </p>
-        <p className="mt-1 text-xs">{DASHBOARD_MESSAGES.LOADING_DIRECTORY}</p>
-        {toolInputIsNonEmpty(input) ? (
-          <pre className="mt-2 max-h-32 overflow-auto font-mono text-[11px] text-[var(--foreground)]">
-            {JSON.stringify(input, null, 2)}
-          </pre>
-        ) : null}
-      </div>
+      <ToolPendingCard
+        title={title}
+        state={state}
+        message={DASHBOARD_MESSAGES.LOADING_DIRECTORY}
+        input={input}
+        showInput={toolInputIsNonEmpty(input)}
+      />
     );
   }
 
@@ -430,9 +515,9 @@ export function ListUsersToolDisplay({ part }: { part: AssistantToolPart }) {
                 </td>
                 <td className="hidden px-3 py-2 sm:table-cell">
                   <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${u.role === "admin"
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-[10px] font-semibold leading-none ${u.role === "admin"
                         ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
-                        : "text-[var(--dash-muted)]"
+                        : "bg-[var(--foreground)]/10 text-[var(--dash-muted)]"
                       }`}
                   >
                     {u.role === "admin" ?

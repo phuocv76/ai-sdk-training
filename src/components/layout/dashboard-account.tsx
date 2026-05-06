@@ -38,7 +38,7 @@ export function DashboardAccountSummary() {
           Role
         </span>
         <span
-          className={`inline-flex rounded-full py-0.5 text-[10px] font-bold uppercase tracking-wide ${user.role === "admin"
+          className={`inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase leading-none tracking-wide ${user.role === "admin"
               ? "bg-emerald-400/20 text-emerald-200"
               : "bg-white/10 text-indigo-100/90"
             }`}

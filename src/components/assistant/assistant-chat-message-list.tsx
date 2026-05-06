@@ -5,7 +5,9 @@ import { getToolName, isTextUIPart, isToolUIPart } from "ai";
 import {
   assistantMessageShouldHideProseForDirectoryResultCard,
   CreateUserToolDisplay,
+  GetMyProfileToolDisplay,
   ListUsersToolDisplay,
+  UpdateMyProfileToolDisplay,
   UpdateUserToolDisplay,
 } from "@/components/create-user-tool-display";
 import { DASHBOARD_MESSAGES } from "@/constants/messages";
@@ -101,6 +103,12 @@ export function AssistantChatMessageList({
                   }
                   if (title === "updateUser") {
                     return <UpdateUserToolDisplay key={i} part={part} />;
+                  }
+                  if (title === "updateMyProfile") {
+                    return <UpdateMyProfileToolDisplay key={i} part={part} />;
+                  }
+                  if (title === "getMyProfile") {
+                    return <GetMyProfileToolDisplay key={i} part={part} />;
                   }
                   if (title === "listUsers") {
                     return <ListUsersToolDisplay key={i} part={part} />;

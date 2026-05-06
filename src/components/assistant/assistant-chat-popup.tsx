@@ -152,11 +152,6 @@ export function AssistantChatPopup({
             <p className="px-5 text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
           ) : null}
 
-          {!isAdmin ? (
-            <p className="border-b border-[var(--dash-border)] bg-emerald-500/[0.08] px-5 py-3 text-xs text-emerald-950 dark:text-emerald-200/95">
-              {DASHBOARD_MESSAGES.MEMBER_BANNER}
-            </p>
-          ) : null}
 
           <AssistantChatComposer
             isAdmin={isAdmin}

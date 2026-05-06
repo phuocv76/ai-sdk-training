@@ -190,6 +190,13 @@ export const DASHBOARD_MESSAGES = {
   USER_UPDATED_SUCCESS_LINE: "Directory record updated — details below.",
   CREATE_USER_TOOL_PENDING: "Creating user…",
   UPDATE_USER_TOOL_PENDING: "Updating user…",
+  UPDATE_MY_PROFILE_TOOL_PENDING: "Updating your profile…",
+  GET_MY_PROFILE_TOOL_PENDING: "Loading your profile…",
+  MEMBER_PROFILE_CARD_BADGE: "Your profile",
+  MEMBER_PROFILE_LOADED_SUCCESS_LINE:
+    "Here’s your profile as stored in the directory.",
+  MEMBER_PROFILE_UPDATED_CARD_BADGE: "Profile updated",
+  MEMBER_PROFILE_UPDATED_SUCCESS_LINE: "Your profile has been saved.",
 } as const;
 
 /** User profile drawer and field labels. */
@@ -262,7 +269,8 @@ They cannot list everyone or change others. Field rules:
 - If a request is off-topic, reply with: "I can only help with user management tasks like profiles, users, roles, and account updates."
 - name, bio optional strings; omit if unchanged.
 - date_of_birth as YYYY-MM-DD or omit; empty/null clears DOB where supported.
-Invite natural language (“set my bio to”) and translate to explicit tool inputs.`;
+Invite natural language (“set my bio to”) and translate to explicit tool inputs.
+- When getMyProfile or updateMyProfile succeeds, do not repeat profile fields (name, email, date of birth, bio, role, status)—the client shows a summary card. Reply with at most one short line if helpful.`;
 }
 
 /** Canonical HTTP header names shared by the chat API and client transport. */

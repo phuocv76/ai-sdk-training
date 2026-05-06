@@ -445,9 +445,9 @@ export function UserDashboard() {
                           </td>
                           <td className="hidden px-5 py-4 md:table-cell">
                             <span
-                              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${u.role === "admin"
+                              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold leading-none ${u.role === "admin"
                                   ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
-                                  : "text-[var(--dash-muted)]"
+                                  : "bg-[var(--foreground)]/10 text-[var(--dash-muted)]"
                                 }`}
                             >
                               {u.role === "admin" ?
