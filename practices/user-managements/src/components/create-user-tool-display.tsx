@@ -94,9 +94,9 @@ const ToolPendingCard = ({
 /**
  * When true, assistant prose for this message is hidden so only the directory result card shows.
  */
-export function assistantMessageShouldHideProseForDirectoryResultCard(
+export const assistantMessageShouldHideProseForDirectoryResultCard = (
   parts: unknown[],
-): boolean {
+): boolean => {
   for (const raw of parts) {
     if (!isToolUIPart(raw as UIMessagePart<UIDataTypes, UITools>)) continue;
     const part = raw as ToolUIPart | DynamicToolUIPart;
@@ -115,16 +115,16 @@ export function assistantMessageShouldHideProseForDirectoryResultCard(
     }
   }
   return false;
-}
+};
 
-function initialsFromName(name: string): string {
+const initialsFromName = (name: string): string => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
   return `${parts[0]![0] ?? ""}${parts[parts.length - 1]![0] ?? ""}`.toUpperCase();
-}
+};
 
-function formatJoinedLine(ms: number): string {
+const formatJoinedLine = (ms: number): string => {
   const d = new Date(ms);
   const time = d.toLocaleTimeString(undefined, {
     hour: "numeric",
@@ -137,15 +137,15 @@ function formatJoinedLine(ms: number): string {
     year: "numeric",
   });
   return `${time} • ${date}`;
-}
+};
 
-function UserResultCard({
+const UserResultCard = ({
   user,
   variant,
 }: {
   user: ClientUser;
   variant: "invited" | "updated" | "profile-loaded" | "profile-updated";
-}) {
+}) => {
   const initials = initialsFromName(user.name);
   const dobDisplay =
     user.date_of_birth && user.date_of_birth.trim() !== "" ?
@@ -272,9 +272,9 @@ function UserResultCard({
       </div>
     </div>
   );
-}
+};
 
-function UserDirectoryToolDisplay({
+const UserDirectoryToolDisplay = ({
   part,
   pendingMessage,
   cardVariant,
@@ -288,7 +288,7 @@ function UserDirectoryToolDisplay({
   parseOutput?: (output: unknown) => ClientUser | null;
   hideConfirmationOutput?: boolean;
   failedFallback?: ReactNode;
-}) {
+}) => {
   const title = getToolName(part);
   const state = "state" in part && typeof part.state === "string" ? part.state : "";
 
@@ -329,68 +329,72 @@ function UserDirectoryToolDisplay({
   }
 
   return null;
-}
+};
 
 /** Rich UI for successful `createUser` tool parts. */
-export function CreateUserToolDisplay({ part }: { part: AssistantToolPart }) {
-  return (
-    <UserDirectoryToolDisplay
-      part={part}
-      pendingMessage={DASHBOARD_MESSAGES.CREATE_USER_TOOL_PENDING}
-      cardVariant="invited"
-      hideConfirmationOutput
-    />
-  );
-}
-
-/** Rich UI for successful `updateUser` tool parts (same card pattern as create). */
-export function UpdateUserToolDisplay({ part }: { part: AssistantToolPart }) {
-  return (
-    <UserDirectoryToolDisplay
-      part={part}
-      pendingMessage={DASHBOARD_MESSAGES.UPDATE_USER_TOOL_PENDING}
-      cardVariant="updated"
-    />
-  );
-}
-
-/** Rich UI for successful `updateMyProfile` (same `{ ok, user }` payload as updateUser). */
-export function UpdateMyProfileToolDisplay({
+export const CreateUserToolDisplay = ({
   part,
 }: {
   part: AssistantToolPart;
-}) {
-  return (
-    <UserDirectoryToolDisplay
-      part={part}
-      pendingMessage={DASHBOARD_MESSAGES.UPDATE_MY_PROFILE_TOOL_PENDING}
-      cardVariant="profile-updated"
-    />
-  );
-}
+}) => (
+  <UserDirectoryToolDisplay
+    part={part}
+    pendingMessage={DASHBOARD_MESSAGES.CREATE_USER_TOOL_PENDING}
+    cardVariant="invited"
+    hideConfirmationOutput
+  />
+);
+
+/** Rich UI for successful `updateUser` tool parts (same card pattern as create). */
+export const UpdateUserToolDisplay = ({
+  part,
+}: {
+  part: AssistantToolPart;
+}) => (
+  <UserDirectoryToolDisplay
+    part={part}
+    pendingMessage={DASHBOARD_MESSAGES.UPDATE_USER_TOOL_PENDING}
+    cardVariant="updated"
+  />
+);
+
+/** Rich UI for successful `updateMyProfile` (same `{ ok, user }` payload as updateUser). */
+export const UpdateMyProfileToolDisplay = ({
+  part,
+}: {
+  part: AssistantToolPart;
+}) => (
+  <UserDirectoryToolDisplay
+    part={part}
+    pendingMessage={DASHBOARD_MESSAGES.UPDATE_MY_PROFILE_TOOL_PENDING}
+    cardVariant="profile-updated"
+  />
+);
 
 /** Member profile card for `getMyProfile` (`{ profile }` payload). */
-export function GetMyProfileToolDisplay({ part }: { part: AssistantToolPart }) {
-  return (
-    <UserDirectoryToolDisplay
-      part={part}
-      pendingMessage={DASHBOARD_MESSAGES.GET_MY_PROFILE_TOOL_PENDING}
-      cardVariant="profile-loaded"
-      parseOutput={parseGetMyProfileToolOutput}
-      failedFallback={
-        <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-4 text-sm text-[var(--dash-muted)] shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dash-muted)]">
-            {DASHBOARD_MESSAGES.MEMBER_PROFILE_CARD_BADGE}
-          </p>
-          <p className="mt-2">{PROFILE_UI_MESSAGES.PROFILE_LOAD_FAILED}</p>
-        </div>
-      }
-    />
-  );
-}
+export const GetMyProfileToolDisplay = ({
+  part,
+}: {
+  part: AssistantToolPart;
+}) => (
+  <UserDirectoryToolDisplay
+    part={part}
+    pendingMessage={DASHBOARD_MESSAGES.GET_MY_PROFILE_TOOL_PENDING}
+    cardVariant="profile-loaded"
+    parseOutput={parseGetMyProfileToolOutput}
+    failedFallback={
+      <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-4 text-sm text-[var(--dash-muted)] shadow-sm">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dash-muted)]">
+          {DASHBOARD_MESSAGES.MEMBER_PROFILE_CARD_BADGE}
+        </p>
+        <p className="mt-2">{PROFILE_UI_MESSAGES.PROFILE_LOAD_FAILED}</p>
+      </div>
+    }
+  />
+);
 
 /** Compact directory table for `listUsers` — hides raw JSON payloads. */
-export function ListUsersToolDisplay({ part }: { part: AssistantToolPart }) {
+export const ListUsersToolDisplay = ({ part }: { part: AssistantToolPart }) => {
   const title = getToolName(part);
   const state = "state" in part && typeof part.state === "string" ? part.state : "";
 
@@ -493,4 +497,4 @@ export function ListUsersToolDisplay({ part }: { part: AssistantToolPart }) {
       </div>
     </div>
   );
-}
+};
