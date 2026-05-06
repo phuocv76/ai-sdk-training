@@ -173,7 +173,7 @@ export const DASHBOARD_MESSAGES = {
   ROW_STATUS_INACTIVE: "Inactive",
   FOOTER_SHOWING_PREFIX: "Showing ",
   FOOTER_OF: " of ",
-  FOOTER_USERS: "users",
+  FOOTER_USERS: " users",
   FOOTER_FILTERED: " (filtered)",
   DIRECTORY_ASSISTANT_TITLE: "Directory assistant",
   PROFILE_ASSISTANT_TITLE: "Profile assistant",

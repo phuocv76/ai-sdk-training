@@ -36,6 +36,10 @@ const USER_MANAGEMENT_TOPICS = [
   "name",
   "email",
   "password",
+  "born",
+  "birth",
+  "birthday",
+  "bday",
   "date of birth",
   "dob",
   "bio",
@@ -63,6 +67,10 @@ const USER_MANAGEMENT_TOPICS = [
 /** Loose pattern so pasted emails (e.g. add-member requests) count as on-topic. */
 const LOOKS_LIKE_EMAIL =
   /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+/** Common date value format for profile updates (YYYY-MM-DD). */
+const LOOKS_LIKE_DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** Accept explicit confirmation-only follow-ups as valid chat intents. */
+const LOOKS_LIKE_CONFIRMATION = /(?:^|\b)(confirm|approve|yes|ok)(?:\b|$)/i;
 
 /** Returns the most recent non-empty user text from UI messages. */
 const latestUserText = (messages: UIMessage[] | undefined): string => {
@@ -96,6 +104,8 @@ const isUserManagementRelated = (input: string): boolean => {
   const normalized = input.toLowerCase();
   if (!normalized) return true;
   if (LOOKS_LIKE_EMAIL.test(input)) return true;
+  if (LOOKS_LIKE_DATE.test(normalized.trim())) return true;
+  if (LOOKS_LIKE_CONFIRMATION.test(normalized)) return true;
   return USER_MANAGEMENT_TOPICS.some((topic) => normalized.includes(topic));
 };
 

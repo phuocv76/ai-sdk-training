@@ -146,6 +146,7 @@ export function AssistantChatPopup({
             messages={messages}
             chatHint={chatHint}
             currentUser={currentUser}
+            busy={busy}
           />
 
           {errorMessage ? (

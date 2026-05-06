@@ -45,10 +45,13 @@ type WorkflowResult<T> =
 /** Detects whether the latest user message explicitly approves an action. */
 const isHumanConfirmation = (text: string): boolean => {
   const normalized = text.trim().toLowerCase();
+  const alphaOnly = normalized.replace(/[^a-z]/g, '');
   if (!normalized) return false;
+  const looksLikeApprove = /^a+p+r+o+v+e+$/.test(alphaOnly);
   return (
     normalized.includes('confirm') ||
     normalized.includes('approve') ||
+    looksLikeApprove ||
     normalized.includes('yes, proceed') ||
     normalized === 'yes' ||
     normalized === 'ok'

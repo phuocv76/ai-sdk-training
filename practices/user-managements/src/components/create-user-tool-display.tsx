@@ -64,37 +64,30 @@ function parseListUsersToolOutput(output: unknown): ClientUser[] | null {
   return users;
 }
 
-function toolInputIsNonEmpty(input: unknown): boolean {
-  if (input == null) return false;
-  if (typeof input !== "object") return true;
-  return Object.keys(input as object).length > 0;
+function parseConfirmationOutput(output: unknown): {
+  message: string;
+  hint: string;
+} | null {
+  if (!output || typeof output !== "object") return null;
+  const o = output as Record<string, unknown>;
+  if (o.requiresConfirmation !== true) return null;
+  if (typeof o.message !== "string" || typeof o.hint !== "string") return null;
+  return { message: o.message, hint: o.hint };
 }
 
 function ToolPendingCard({
   title,
-  state,
   message,
-  input,
-  showInput,
 }: {
   title: string;
-  state: string;
   message: ReactNode;
-  input?: unknown;
-  showInput: boolean;
 }) {
   return (
     <div className="rounded-xl border border-dashed border-[var(--dash-border)] bg-[var(--background)]/80 px-3 py-3 text-sm text-[var(--dash-muted)]">
       <p className="font-mono text-[11px] font-semibold text-[var(--foreground)]">
-        {title}{" "}
-        <span className="font-normal opacity-70">({state})</span>
+        {title}
       </p>
       <p className="mt-1 text-xs">{message}</p>
-      {showInput ?
-        <pre className="mt-2 max-h-32 overflow-auto font-mono text-[11px] text-[var(--foreground)]">
-          {JSON.stringify(input, null, 2)}
-        </pre>
-      : null}
     </div>
   );
 }
@@ -282,72 +275,50 @@ function UserResultCard({
   );
 }
 
-function GenericToolBlock({
-  title,
-  state,
-  input,
-  output,
-}: {
-  title: string;
-  state: string;
-  input?: unknown;
-  output?: unknown;
-}) {
-  return (
-    <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--background)] px-3 py-2 font-mono text-[11px] text-[var(--foreground)]">
-      <div className="font-semibold text-[var(--dash-muted)]">
-        {title}{" "}
-        <span className="font-normal opacity-70">({state})</span>
-      </div>
-      {input != null ? (
-        <pre className="mt-2 max-h-40 overflow-auto text-[var(--foreground)]">
-          {JSON.stringify(input, null, 2)}
-        </pre>
-      ) : null}
-      {output !== undefined ? (
-        <pre className="mt-2 max-h-48 overflow-auto text-[var(--foreground)]">
-          {JSON.stringify(output, null, 2)}
-        </pre>
-      ) : null}
-    </div>
-  );
-}
-
 function UserDirectoryToolDisplay({
   part,
   pendingMessage,
   cardVariant,
   parseOutput = parseOkUserToolOutput,
-  pendingShowInputPreview = true,
+  hideConfirmationOutput = false,
   failedFallback,
 }: {
   part: AssistantToolPart;
   pendingMessage: string;
   cardVariant: "invited" | "updated" | "profile-loaded" | "profile-updated";
   parseOutput?: (output: unknown) => ClientUser | null;
-  pendingShowInputPreview?: boolean;
+  hideConfirmationOutput?: boolean;
   failedFallback?: ReactNode;
 }) {
   const title = getToolName(part);
-  const state =
-    "state" in part && typeof part.state === "string" ? part.state : "";
-  const input = "input" in part ? part.input : undefined;
+  const state = "state" in part && typeof part.state === "string" ? part.state : "";
 
   if (state !== "output-available") {
     return (
       <ToolPendingCard
         title={title}
-        state={state}
         message={pendingMessage}
-        input={input}
-        showInput={
-          pendingShowInputPreview && ("input" in part && part.input != null)
-        }
       />
     );
   }
 
   const output = "output" in part ? part.output : undefined;
+  const confirmation = parseConfirmationOutput(output);
+  if (confirmation) {
+    if (hideConfirmationOutput) return null;
+    return (
+      <ToolPendingCard
+        title={title}
+        message={
+          <>
+            {confirmation.message}
+            <br />
+            {confirmation.hint}
+          </>
+        }
+      />
+    );
+  }
   const user = parseOutput(output);
 
   if (user) {
@@ -358,14 +329,7 @@ function UserDirectoryToolDisplay({
     return failedFallback;
   }
 
-  return (
-    <GenericToolBlock
-      title={title}
-      state={state}
-      input={input}
-      output={output}
-    />
-  );
+  return null;
 }
 
 /** Rich UI for successful `createUser` tool parts. */
@@ -375,6 +339,7 @@ export function CreateUserToolDisplay({ part }: { part: AssistantToolPart }) {
       part={part}
       pendingMessage={DASHBOARD_MESSAGES.CREATE_USER_TOOL_PENDING}
       cardVariant="invited"
+      hideConfirmationOutput
     />
   );
 }
@@ -413,7 +378,6 @@ export function GetMyProfileToolDisplay({ part }: { part: AssistantToolPart }) {
       pendingMessage={DASHBOARD_MESSAGES.GET_MY_PROFILE_TOOL_PENDING}
       cardVariant="profile-loaded"
       parseOutput={parseGetMyProfileToolOutput}
-      pendingShowInputPreview={false}
       failedFallback={
         <div className="rounded-xl border border-[var(--dash-border)] bg-[var(--dash-card)] p-4 text-sm text-[var(--dash-muted)] shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--dash-muted)]">
@@ -429,18 +393,13 @@ export function GetMyProfileToolDisplay({ part }: { part: AssistantToolPart }) {
 /** Compact directory table for `listUsers` — hides raw JSON payloads. */
 export function ListUsersToolDisplay({ part }: { part: AssistantToolPart }) {
   const title = getToolName(part);
-  const state =
-    "state" in part && typeof part.state === "string" ? part.state : "";
+  const state = "state" in part && typeof part.state === "string" ? part.state : "";
 
   if (state !== "output-available") {
-    const input = "input" in part ? part.input : undefined;
     return (
       <ToolPendingCard
         title={title}
-        state={state}
         message={DASHBOARD_MESSAGES.LOADING_DIRECTORY}
-        input={input}
-        showInput={toolInputIsNonEmpty(input)}
       />
     );
   }
@@ -449,14 +408,7 @@ export function ListUsersToolDisplay({ part }: { part: AssistantToolPart }) {
   const users = parseListUsersToolOutput(output);
 
   if (!users) {
-    return (
-      <GenericToolBlock
-        title={title}
-        state={state}
-        input={"input" in part ? part.input : undefined}
-        output={output}
-      />
-    );
+    return null;
   }
 
   if (users.length === 0) {
