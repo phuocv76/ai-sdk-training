@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 // Constants
 import { API_MESSAGES } from "@/constants/messages";
@@ -14,21 +13,17 @@ import {
 } from "@/lib/auth-cookies";
 import { verifyPassword } from "@/lib/password";
 import { createSession } from "@/lib/sessions";
+import { loginBodySchema } from "@/lib/user-management-schemas";
 import { getUserWithSecret, userResponseBody } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
-
-const bodySchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1).max(256),
-});
 
 /**
  * Validates credentials and issues a signed session cookie (`um_session`).
  * @returns JSON `{ ok, user }` on success, or `{ error }` with 4xx status.
  */
 export async function POST(req: Request) {
-  const parsed = bodySchema.safeParse(await req.json().catch(() => null));
+  const parsed = loginBodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
       { error: API_MESSAGES.INVALID_INPUT },

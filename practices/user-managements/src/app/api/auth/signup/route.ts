@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 // Constants
 import { API_MESSAGES } from "@/constants/messages";
@@ -14,22 +13,17 @@ import {
 } from "@/lib/auth-cookies";
 import { hashPassword } from "@/lib/password";
 import { createSession } from "@/lib/sessions";
+import { signupBodySchema } from "@/lib/user-management-schemas";
 import { countAdmins, registerUserAccount } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
-
-const bodySchema = z.object({
-  name: z.string().min(1).max(120),
-  email: z.string().email().max(255),
-  password: z.string().min(8).max(256),
-});
 
 /**
  * Registers a new account (first signup becomes admin) and starts a session.
  * @returns JSON `{ ok, user }` or `{ error }` with conflict/validation status.
  */
 export async function POST(req: Request) {
-  const parsed = bodySchema.safeParse(await req.json().catch(() => null));
+  const parsed = signupBodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
       { error: API_MESSAGES.INVALID_INPUT },

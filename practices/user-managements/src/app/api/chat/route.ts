@@ -1,22 +1,15 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import {
-  convertToModelMessages,
-  stepCountIs,
+  createAgentUIStreamResponse,
   streamText,
-  tool,
   type UIMessage,
 } from "ai";
-import { z } from "zod";
 
 // Constants
 import {
   API_MESSAGES,
-  CHAT_SYSTEM_PROMPTS,
-  CHAT_TOOL_MESSAGES,
   REQUEST_HEADERS,
-  USER_DOMAIN_ERRORS,
-  chatMemberSystemPrompt,
 } from "@/constants/messages";
 
 // Libraries
@@ -24,15 +17,7 @@ import {
   requireDatabase,
   resolveSessionUser,
 } from "@/lib/auth-cookies";
-import {
-  createUser,
-  deleteUser,
-  getUser,
-  listUsers,
-  updateMemberProfile,
-  updateUser,
-  userResponseBody,
-} from "@/lib/users";
+import { createUserManagementAgent } from "@/lib/user-management-agent";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +64,8 @@ const USER_MANAGEMENT_TOPICS = [
 const LOOKS_LIKE_EMAIL =
   /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
 
-function latestUserText(messages: UIMessage[] | undefined): string {
+/** Returns the most recent non-empty user text from UI messages. */
+const latestUserText = (messages: UIMessage[] | undefined): string => {
   if (!messages?.length) return "";
 
   for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -103,28 +89,21 @@ function latestUserText(messages: UIMessage[] | undefined): string {
   }
 
   return "";
-}
+};
 
-function isUserManagementRelated(input: string): boolean {
+/** Basic guard to keep chat constrained to user-management intents. */
+const isUserManagementRelated = (input: string): boolean => {
   const normalized = input.toLowerCase();
   if (!normalized) return true;
   if (LOOKS_LIKE_EMAIL.test(input)) return true;
   return USER_MANAGEMENT_TOPICS.some((topic) => normalized.includes(topic));
-}
-
-const dobField = z
-  .union([
-    z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    z.literal(""),
-    z.null(),
-  ])
-  .optional();
+};
 
 /**
  * Streams an AI assistant backed by authenticated tool calls (profile + admin CRUD).
  * @param req Incoming chat UI messages and optional `x-openai-api-key` override.
  */
-export async function POST(req: Request) {
+export const POST = async (req: Request) => {
   let body: { messages: UIMessage[] };
   try {
     body = await req.json();
@@ -149,8 +128,6 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json" },
     });
   }
-  const isAdmin = me.role === "admin";
-
   const { env } = await getCloudflareContext({ async: true });
   const db = dbCtx.db;
   const headerKey = req.headers.get(REQUEST_HEADERS.OPENAI_API_KEY_OVERRIDE)?.trim();
@@ -182,167 +159,15 @@ export async function POST(req: Request) {
     return offTopicResult.toUIMessageStreamResponse();
   }
 
-  const modelMessages = await convertToModelMessages(body.messages);
-
-  const memberTools =
-    ({
-      getMyProfile: tool({
-        description: CHAT_TOOL_MESSAGES.GET_MY_PROFILE,
-        inputSchema: z.object({}),
-        execute: async () => {
-          const u = await getUser(db, me.id);
-          return { profile: u ? userResponseBody(u) : null };
-        },
-      }),
-      updateMyProfile: tool({
-        description: CHAT_TOOL_MESSAGES.UPDATE_MY_PROFILE,
-        inputSchema: z.object({
-          name: z.string().min(1).max(120).optional(),
-          date_of_birth: dobField,
-          bio: z.string().max(8000).nullable().optional(),
-        }),
-        execute: async (input) => {
-          try {
-            const patch: {
-              name?: string;
-              date_of_birth?: string | null;
-              bio?: string | null;
-            } = {};
-            if (input.name !== undefined) patch.name = input.name;
-            if (input.date_of_birth !== undefined) {
-              patch.date_of_birth =
-                input.date_of_birth === "" || input.date_of_birth === null ?
-                  null
-                : input.date_of_birth;
-            }
-            if (input.bio !== undefined) patch.bio = input.bio;
-
-            const user = await updateMemberProfile(db, me.id, patch);
-            if (!user)
-              return {
-                ok: false as const,
-                error: USER_DOMAIN_ERRORS.COULD_NOT_LOAD_PROFILE,
-              };
-            return { ok: true as const, user: userResponseBody(user) };
-          } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            return { ok: false as const, error: msg };
-          }
-        },
-      }),
-    }) as const;
-
-  const adminReadTools =
-    ({
-      ...memberTools,
-      listUsers: tool({
-        description: CHAT_TOOL_MESSAGES.LIST_USERS,
-        inputSchema: z.object({}),
-        execute: async () => ({
-          users: await listUsers(db),
-        }),
-      }),
-      getUser: tool({
-        description: CHAT_TOOL_MESSAGES.GET_USER,
-        inputSchema: z.object({
-          id: z.string().describe(CHAT_TOOL_MESSAGES.USER_ID_PARAM),
-        }),
-        execute: async ({ id }) => {
-          const user = await getUser(db, id);
-          return user ?? { notFound: true, id };
-        },
-      }),
-    }) as const;
-
-  const adminTools =
-    ({
-      ...adminReadTools,
-      createUser: tool({
-        description: CHAT_TOOL_MESSAGES.CREATE_USER,
-        inputSchema: z.object({
-          name: z.string().min(1),
-          email: z.string().email(),
-          date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-          bio: z.string().max(8000).optional(),
-        }),
-        execute: async (input) => {
-          try {
-            const user = await createUser(db, input);
-            return { ok: true as const, user };
-          } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            return { ok: false as const, error: msg };
-          }
-        },
-      }),
-      updateUser: tool({
-        description: CHAT_TOOL_MESSAGES.UPDATE_USER,
-        inputSchema: z.object({
-          id: z.string(),
-          name: z.string().optional(),
-          email: z.string().email().optional(),
-          date_of_birth: dobField,
-          bio: z.string().max(8000).nullable().optional(),
-          status: z.enum(["active", "inactive"]).optional(),
-        }),
-        execute: async (input) => {
-          try {
-            const { id, ...fields } = input;
-            if (fields.status === "inactive" && id === me.id) {
-              return {
-                ok: false as const,
-                error: API_MESSAGES.CANNOT_DEACTIVATE_SELF_ACCOUNT,
-              };
-            }
-            const user = await updateUser(db, {
-              id,
-              name: fields.name,
-              email: fields.email,
-              bio: fields.bio,
-              ...(fields.status !== undefined ? { status: fields.status } : {}),
-              ...(fields.date_of_birth !== undefined ?
-                {
-                  date_of_birth:
-                    fields.date_of_birth === "" ||
-                      fields.date_of_birth === null ?
-                      null
-                    : fields.date_of_birth,
-                }
-              : {}),
-            });
-            if (!user)
-              return { ok: false as const, error: API_MESSAGES.USER_NOT_FOUND };
-            return { ok: true as const, user };
-          } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            return { ok: false as const, error: msg };
-          }
-        },
-      }),
-      deleteUser: tool({
-        description: CHAT_TOOL_MESSAGES.DELETE_USER,
-        inputSchema: z.object({
-          id: z.string(),
-        }),
-        execute: async ({ id }) => {
-          const { deleted } = await deleteUser(db, id);
-          return { ok: deleted, id };
-        },
-      }),
-    }) as const;
-
-  const tools = isAdmin ? adminTools : memberTools;
-
-  const result = streamText({
+  const agent = createUserManagementAgent({
     model: openai("gpt-4o-mini"),
-    stopWhen: stepCountIs(12),
-    system:
-      isAdmin ?
-        CHAT_SYSTEM_PROMPTS.ADMIN
-      : chatMemberSystemPrompt(me.name),
-    messages: modelMessages,
-    tools,
+    db,
+    me,
+    latestText,
   });
 
-  return result.toUIMessageStreamResponse();
-}
+  return createAgentUIStreamResponse({
+    agent,
+    uiMessages: body.messages,
+  });
+};

@@ -255,7 +255,10 @@ Rules:
 - To deactivate a user account (block login and end sessions), call updateUser with status "inactive". To re-enable, use status "active". Never deactivate the signed-in admin's own account.
 - For createUser, collect required fields first: email, full name, and date_of_birth (YYYY-MM-DD). Ask follow-up questions if anything is missing. Bio is optional.
 - Do not call createUser until all required fields are provided and unambiguous.
-- Handle unique email collisions clearly.`,
+- Handle unique email collisions clearly.
+- For mutating actions (createUser, updateUser, deleteUser), call the tool once to produce a confirmation preview first.
+- After the tool returns a confirmation-needed response, ask the human to reply with "confirm <toolName>" or "approve".
+- Only after an explicit human confirmation message should you call the same mutating tool again to execute.`,
 } as const;
 
 /**
@@ -270,6 +273,7 @@ They cannot list everyone or change others. Field rules:
 - name, bio optional strings; omit if unchanged.
 - date_of_birth as YYYY-MM-DD or omit; empty/null clears DOB where supported.
 Invite natural language (“set my bio to”) and translate to explicit tool inputs.
+- For updateMyProfile, first call the tool to get a confirmation preview, then ask the human to reply with "confirm updateMyProfile" or "approve" before executing.
 - When getMyProfile or updateMyProfile succeeds, do not repeat profile fields (name, email, date of birth, bio, role, status)—the client shows a summary card. Reply with at most one short line if helpful.`;
 }
 
