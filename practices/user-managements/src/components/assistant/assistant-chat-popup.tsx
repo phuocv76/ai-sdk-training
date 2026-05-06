@@ -7,6 +7,7 @@ import { DASHBOARD_MESSAGES } from "@/constants/messages";
 
 // Libraries
 import type { User } from "@/lib/users";
+import { renderInlineMarkdownBold } from "@/lib/render-inline-markdown-bold";
 
 import { AssistantChatComposer } from "./assistant-chat-composer";
 import { AssistantChatMessageList } from "./assistant-chat-message-list";
@@ -35,7 +36,7 @@ const SCALE_STEP = 0.1;
 const BASE_WIDTH = 430;
 const BASE_HEIGHT = 620;
 
-export function AssistantChatPopup({
+export const AssistantChatPopup = ({
   isAdmin,
   currentUser,
   messages,
@@ -45,7 +46,7 @@ export function AssistantChatPopup({
   input,
   setInput,
   onSubmit,
-}: AssistantChatPopupProps) {
+}: AssistantChatPopupProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [scale, setScale] = useState(1);
 
@@ -150,7 +151,9 @@ export function AssistantChatPopup({
           />
 
           {errorMessage ? (
-            <p className="px-5 text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
+            <p className="px-5 text-sm text-red-600 dark:text-red-400">
+              {renderInlineMarkdownBold(errorMessage)}
+            </p>
           ) : null}
 
 
@@ -165,4 +168,4 @@ export function AssistantChatPopup({
       ) : null}
     </div>
   );
-}
+};

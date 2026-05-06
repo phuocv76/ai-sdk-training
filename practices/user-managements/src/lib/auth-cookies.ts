@@ -23,9 +23,9 @@ export const SESSION_MAX_AGE_SEC = 60 * 60 * 24 * 7;
  * Resolves the bound D1 database from the Cloudflare context.
  * @returns Either `{ db }` or an HTTP-style `{ error, status }` when misconfigured or unavailable.
  */
-export async function requireDatabase(): Promise<
+export const requireDatabase = async (): Promise<
   { db: D1Database } | { error: string; status: 500 | 503 }
-> {
+> => {
   try {
     const { env } = await getCloudflareContext({ async: true });
     if (!env.DB) {
@@ -38,17 +38,17 @@ export async function requireDatabase(): Promise<
   } catch {
     return { error: DATABASE_MESSAGES.UNAVAILABLE, status: 503 };
   }
-}
+};
 
 /**
  * Returns the signed-in user from the session cookie and database (Route Handlers).
  * @param prisma Active Prisma client for the current request.
  */
-export async function resolveSessionUser(
+export const resolveSessionUser = async (
   db: D1Database,
-): Promise<User | null> {
+): Promise<User | null> => {
   const jar = await cookies();
   const sid = jar.get(SESSION_COOKIE)?.value;
   if (!sid) return null;
   return getUserForSession(db, sid);
-}
+};

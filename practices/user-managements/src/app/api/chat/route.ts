@@ -52,6 +52,7 @@ const USER_MANAGEMENT_TOPICS = [
   "invite",
   "update",
   "delete",
+  "remove",
   "list",
   "deactivate",
   "deactive",

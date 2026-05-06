@@ -11,13 +11,13 @@ type AssistantChatComposerProps = {
   onSubmit: (event: React.FormEvent) => void | Promise<void>;
 };
 
-export function AssistantChatComposer({
+export const AssistantChatComposer = ({
   isAdmin,
   busy,
   input,
   setInput,
   onSubmit,
-}: AssistantChatComposerProps) {
+}: AssistantChatComposerProps) => {
   return (
     <form
       onSubmit={(e) => void onSubmit(e)}
@@ -46,4 +46,4 @@ export function AssistantChatComposer({
       </div>
     </form>
   );
-}
+};

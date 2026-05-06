@@ -10,11 +10,11 @@ const WEEK_SEC = 60 * 60 * 24 * 7;
  * @param userId User to attach.
  * @param ttlSeconds Session lifetime in seconds (default one week).
  */
-export async function createSession(
+export const createSession = async (
   db: D1Database,
   userId: string,
   ttlSeconds: number = WEEK_SEC,
-): Promise<string> {
+): Promise<string> => {
   const id = crypto.randomUUID();
   const expires_at = Date.now() + ttlSeconds * 1000;
   await db
@@ -22,17 +22,17 @@ export async function createSession(
     .bind(id, userId, expires_at)
     .run();
   return id;
-}
+};
 
 /**
  * Resolves a non-expired session to the linked `User`, or `null`.
  * @param prisma Active Prisma client.
  * @param sessionId Session id from the cookie.
  */
-export async function getUserForSession(
+export const getUserForSession = async (
   db: D1Database,
   sessionId: string,
-): Promise<User | null> {
+): Promise<User | null> => {
   const now = Date.now();
   const session = (await db
     .prepare(
@@ -44,16 +44,16 @@ export async function getUserForSession(
   const user = await getUser(db, session.user_id);
   if (!user || user.status !== "active") return null;
   return user;
-}
+};
 
 /**
  * Deletes all session rows matching `sessionId` (idempotent sign-out).
  * @param prisma Active Prisma client.
  * @param sessionId Session id to revoke.
  */
-export async function deleteSession(
+export const deleteSession = async (
   db: D1Database,
   sessionId: string,
-) {
+) => {
   await db.prepare("DELETE FROM sessions WHERE id = ?1").bind(sessionId).run();
-}
+};

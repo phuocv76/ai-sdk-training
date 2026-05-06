@@ -17,11 +17,12 @@ import {
   PROFILE_UI_MESSAGES,
   UI_SYMBOLS,
 } from "@/constants/messages";
+import { renderInlineMarkdownBold } from "@/lib/render-inline-markdown-bold";
 import { displayName, type ClientUser } from "@/lib/users";
 
 type AssistantToolPart = ToolUIPart | DynamicToolUIPart;
 
-function tryParseClientUser(u: unknown): ClientUser | null {
+const tryParseClientUser = (u: unknown): ClientUser | null => {
   if (!u || typeof u !== "object") return null;
   const user = u as Record<string, unknown>;
   if (
@@ -35,23 +36,23 @@ function tryParseClientUser(u: unknown): ClientUser | null {
     return null;
   }
   return u as ClientUser;
-}
+};
 
 /** Parses `{ profile }` from getMyProfile tool output. */
-function parseGetMyProfileToolOutput(output: unknown): ClientUser | null {
+const parseGetMyProfileToolOutput = (output: unknown): ClientUser | null => {
   if (!output || typeof output !== "object") return null;
   return tryParseClientUser((output as Record<string, unknown>).profile);
-}
+};
 
 /** Parses `{ ok: true, user }` from createUser / updateUser tool output. */
-function parseOkUserToolOutput(output: unknown): ClientUser | null {
+const parseOkUserToolOutput = (output: unknown): ClientUser | null => {
   if (!output || typeof output !== "object") return null;
   const o = output as Record<string, unknown>;
   if (o.ok !== true) return null;
   return tryParseClientUser(o.user);
-}
+};
 
-function parseListUsersToolOutput(output: unknown): ClientUser[] | null {
+const parseListUsersToolOutput = (output: unknown): ClientUser[] | null => {
   if (!output || typeof output !== "object") return null;
   const raw = (output as Record<string, unknown>).users;
   if (!Array.isArray(raw)) return null;
@@ -62,35 +63,33 @@ function parseListUsersToolOutput(output: unknown): ClientUser[] | null {
     users.push(parsed);
   }
   return users;
-}
+};
 
-function parseConfirmationOutput(output: unknown): {
+const parseConfirmationOutput = (output: unknown): {
   message: string;
   hint: string;
-} | null {
+} | null => {
   if (!output || typeof output !== "object") return null;
   const o = output as Record<string, unknown>;
   if (o.requiresConfirmation !== true) return null;
   if (typeof o.message !== "string" || typeof o.hint !== "string") return null;
   return { message: o.message, hint: o.hint };
-}
+};
 
-function ToolPendingCard({
+const ToolPendingCard = ({
   title,
   message,
 }: {
   title: string;
   message: ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-dashed border-[var(--dash-border)] bg-[var(--background)]/80 px-3 py-3 text-sm text-[var(--dash-muted)]">
-      <p className="font-mono text-[11px] font-semibold text-[var(--foreground)]">
-        {title}
-      </p>
-      <p className="mt-1 text-xs">{message}</p>
-    </div>
-  );
-}
+}) => (
+  <div className="rounded-xl border border-dashed border-[var(--dash-border)] bg-[var(--background)]/80 px-3 py-3 text-sm text-[var(--dash-muted)]">
+    <p className="font-mono text-[11px] font-semibold text-[var(--foreground)]">
+      {title}
+    </p>
+    <p className="mt-1 text-xs">{message}</p>
+  </div>
+);
 
 /**
  * When true, assistant prose for this message is hidden so only the directory result card shows.
@@ -311,9 +310,9 @@ function UserDirectoryToolDisplay({
         title={title}
         message={
           <>
-            {confirmation.message}
+            {renderInlineMarkdownBold(confirmation.message)}
             <br />
-            {confirmation.hint}
+            {renderInlineMarkdownBold(confirmation.hint)}
           </>
         }
       />

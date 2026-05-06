@@ -234,9 +234,9 @@ export const CHAT_TOOL_MESSAGES = {
   GET_USER: "Fetch one user by id (includes profile columns).",
   USER_ID_PARAM: "User id (UUID)",
   CREATE_USER:
-    "Create a directory user with unique email, full name, and date of birth (YYYY-MM-DD); bio is optional. Default password is Abcd@123.",
+    "Create a directory user with unique email (standard RFC-like syntax; multi-part domains such as example.com.vn or mail.co.uk are valid), full name, and date of birth (YYYY-MM-DD); bio is optional. Default password is Abcd@123.",
   UPDATE_USER:
-    "Update identity, profile, account status (active | inactive), or any combination for any user by id. Omit unchanged fields. Setting status to inactive signs the user out everywhere.",
+    "Update identity, profile, account status (active | inactive), or any combination for any user by id. Omit unchanged fields. Email may use multi-part domains (e.g. example.com.vn). Setting status to inactive signs the user out everywhere.",
   DELETE_USER: "Delete a user by id.",
 } as const;
 
@@ -254,19 +254,21 @@ Rules:
 - For updates only pass fields that change; omit others.
 - To deactivate a user account (block login and end sessions), call updateUser with status "inactive". To re-enable, use status "active". Never deactivate the signed-in admin's own account.
 - For createUser, collect required fields first: email, full name, and date_of_birth (YYYY-MM-DD). Ask follow-up questions if anything is missing. Bio is optional.
+- Email addresses may include multi-level domains (e.g. user@company.com.vn, user@example.co.uk). Do not reject or question an email solely because the domain has multiple dots; if it resembles a normal address, pass it to createUser or updateUser and let tool validation decide—never invent “invalid email format” errors for addresses like these.
 - Do not call createUser until all required fields are provided and unambiguous.
 - Handle unique email collisions clearly.
-- For mutating actions (createUser, updateUser, deleteUser), call the tool once to produce a confirmation preview first.
+- For createUser and deleteUser, call the tool once to produce a confirmation preview first.
 - After the tool returns a confirmation-needed response, ask the human to reply with "confirm <toolName>" or "approve".
-- Only after an explicit human confirmation message should you call the same mutating tool again to execute.`,
+- Only after an explicit human confirmation message should you call the same mutating tool again to execute.
+- updateUser applies in one tool call immediately—do not ask for "confirm updateUser" or a separate approve step.`,
 } as const;
 
 /**
  * Builds the member-facing system prompt with the user's display/account name.
  * @param memberName Signed-in user's name shown in prompt context.
  */
-export function chatMemberSystemPrompt(memberName: string): string {
-  return `You help the signed-in member (${memberName}) with their OWN profile via getMyProfile and updateMyProfile.
+export const chatMemberSystemPrompt = (memberName: string): string =>
+  `You help the signed-in member (${memberName}) with their OWN profile via getMyProfile and updateMyProfile.
 They cannot list everyone or change others. Field rules:
 - Only answer requests related to user management (users, profiles, accounts, roles, authentication, directory data).
 - If a request is off-topic, reply with: "I can only help with user management tasks like profiles, users, roles, and account updates."
@@ -275,7 +277,6 @@ They cannot list everyone or change others. Field rules:
 Invite natural language (“set my bio to”) and translate to explicit tool inputs.
 - For updateMyProfile, first call the tool to get a confirmation preview, then ask the human to reply with "confirm updateMyProfile" or "approve" before executing.
 - When getMyProfile or updateMyProfile succeeds, do not repeat profile fields (name, email, date of birth, bio, role, status)—the client shows a summary card. Reply with at most one short line if helpful.`;
-}
 
 /** Canonical HTTP header names shared by the chat API and client transport. */
 export const REQUEST_HEADERS = {

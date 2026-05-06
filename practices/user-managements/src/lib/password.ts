@@ -6,53 +6,18 @@ const BCRYPT_ROUNDS = 12;
 /** Legacy PBKDF2-SHA256 encoding (verify-only for existing rows). */
 const LEGACY_PREFIX = 'pbkdf2-sha256';
 
-/**
- * Produces a bcrypt password hash (`genSalt` + `hash`).
- * @param password Plain-text password from the client.
- */
-export async function hashPassword(password: string): Promise<string> {
-  const salt = await genSalt(BCRYPT_ROUNDS);
-  return hash(password, salt);
-}
-
-/**
- * Verifies a plaintext password against a stored hash (bcrypt or legacy PBKDF2).
- * @param password Candidate password.
- * @param stored Bcrypt string, legacy `pbkdf2-sha256:...` string, or absent.
- */
-export async function verifyPassword(
-  password: string,
-  stored: string | null | undefined,
-): Promise<boolean> {
-  if (!stored) return false;
-
-  if (stored.startsWith('$2')) {
-    try {
-      return await compare(password, stored);
-    } catch {
-      return false;
-    }
-  }
-
-  if (stored.startsWith(`${LEGACY_PREFIX}:`)) {
-    return verifyLegacyPbkdf2(password, stored);
-  }
-
-  return false;
-}
-
-function b64decode(s: string): Uint8Array {
+const b64decode = (s: string): Uint8Array => {
   const bin = atob(s);
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
-}
+};
 
-async function derive(
+const derive = async (
   password: string,
   salt: Uint8Array,
   iterations: number,
-): Promise<Uint8Array> {
+): Promise<Uint8Array> => {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
@@ -75,12 +40,12 @@ async function derive(
     256,
   );
   return new Uint8Array(bits);
-}
+};
 
-async function verifyLegacyPbkdf2(
+const verifyLegacyPbkdf2 = async (
   password: string,
   stored: string,
-): Promise<boolean> {
+): Promise<boolean> => {
   const parts = stored.split(':');
   if (parts.length !== 4) return false;
   const [, iterRaw, saltB64, hashB64] = parts;
@@ -107,4 +72,39 @@ async function verifyLegacyPbkdf2(
   } catch {
     return false;
   }
-}
+};
+
+/**
+ * Produces a bcrypt password hash (`genSalt` + `hash`).
+ * @param password Plain-text password from the client.
+ */
+export const hashPassword = async (password: string): Promise<string> => {
+  const salt = await genSalt(BCRYPT_ROUNDS);
+  return hash(password, salt);
+};
+
+/**
+ * Verifies a plaintext password against a stored hash (bcrypt or legacy PBKDF2).
+ * @param password Candidate password.
+ * @param stored Bcrypt string, legacy `pbkdf2-sha256:...` string, or absent.
+ */
+export const verifyPassword = async (
+  password: string,
+  stored: string | null | undefined,
+): Promise<boolean> => {
+  if (!stored) return false;
+
+  if (stored.startsWith('$2')) {
+    try {
+      return await compare(password, stored);
+    } catch {
+      return false;
+    }
+  }
+
+  if (stored.startsWith(`${LEGACY_PREFIX}:`)) {
+    return verifyLegacyPbkdf2(password, stored);
+  }
+
+  return false;
+};

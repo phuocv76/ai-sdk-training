@@ -37,8 +37,15 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
+const PUBLIC_PATHS = new Set(["/login", "/docs"]);
+
+function isPublicPath(pathname: string | null): boolean {
+  return pathname != null && PUBLIC_PATHS.has(pathname);
+}
+
 /**
  * Fetches `/api/auth/me`, gates protected routes, and redirects between `/login` and `/`.
+ * `/docs` (Swagger UI) is reachable without a session.
  */
 export function AuthSessionProvider({
   children,
@@ -70,7 +77,8 @@ export function AuthSessionProvider({
   useEffect(() => {
     if (loading) return;
     const onLogin = pathname === "/login";
-    if (!user && !onLogin) {
+    const allowWithoutUser = isPublicPath(pathname);
+    if (!user && !allowWithoutUser) {
       router.replace("/login");
     }
     if (user && onLogin) {
@@ -98,8 +106,8 @@ export function AuthSessionProvider({
     );
   }
 
-  const onLoginPage = pathname === "/login";
-  if (!user && !onLoginPage) {
+  const allowWithoutUser = isPublicPath(pathname);
+  if (!user && !allowWithoutUser) {
     return (
       <div className="flex min-h-full flex-1 flex-col items-center justify-center gap-3 bg-[var(--background)] px-4 py-16 text-[var(--dash-muted)]">
         <div className="h-9 w-9 animate-spin rounded-full border-2 border-[var(--dash-accent)] border-t-transparent" />
