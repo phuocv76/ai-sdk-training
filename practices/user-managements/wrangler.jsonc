@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "user-management-app",
+  "name": "user-managements",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-05-01",
   "compatibility_flags": ["nodejs_compat"],
