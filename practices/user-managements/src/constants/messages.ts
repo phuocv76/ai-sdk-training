@@ -135,7 +135,7 @@ export const DASHBOARD_MESSAGES = {
   MEMBER_CHAT_SUBTITLE:
     "Assistant updates your profile (name, bio, birthday) via chat",
   CHAT_HINT_ADMIN:
-    'Try: "List users", "Set user <id> bio to …", or add a new account.',
+    'Try: create new user, updated or deleted user or deactivate/activate user',
   CHAT_HINT_MEMBER:
     'Try: "Show my profile", "Set my first name to …", "Update my date of birth to 1995-06-01".',
   MEMBER_BANNER:

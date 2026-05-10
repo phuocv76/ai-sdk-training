@@ -8,6 +8,7 @@ import {
 } from 'ai';
 
 import { API_MESSAGES, REQUEST_HEADERS } from '@/constants/messages';
+import { wrapUserManagementChatModel } from '@/server/ai/chat-language-model';
 import { requireDatabase, resolveSessionUser } from '@/server/auth/cookies';
 import { createUserManagementAgent } from '@/server/ai/user-management-agent';
 import { USER_MANAGEMENT_TOPICS } from '@/constants/promts';
@@ -123,12 +124,13 @@ export const handleChatPost = async (req: Request): Promise<Response> => {
   }
 
   const openai = createOpenAI({ apiKey });
+  const languageModel = wrapUserManagementChatModel(openai);
   const latestText = latestUserText(body.messages);
 
   try {
     if (!isUserManagementRelated(latestText)) {
       const offTopicResult = streamText({
-        model: openai('gpt-4o-mini'),
+        model: languageModel,
         system:
           'You are a strict user-management assistant. Reply with exactly the provided message and nothing else.',
         messages: [
@@ -145,7 +147,7 @@ export const handleChatPost = async (req: Request): Promise<Response> => {
     }
 
     const agent = createUserManagementAgent({
-      model: openai('gpt-4o-mini'),
+      model: languageModel,
       db,
       me,
       latestText,

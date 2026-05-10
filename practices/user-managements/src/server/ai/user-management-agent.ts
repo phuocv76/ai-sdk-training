@@ -45,6 +45,5 @@ export const createUserManagementAgent = ({
     instructions,
     tools,
     stopWhen: stepCountIs(12),
-    temperature: 0,
   });
 };
