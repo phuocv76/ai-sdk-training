@@ -160,7 +160,7 @@ export const DASHBOARD_MESSAGES = {
     "Use the assistant to revise first name, last name, date of birth, or bio anytime.",
   USERS_SECTION_TITLE: "Users",
   USERS_SECTION_BLURB:
-    "Click a row to open the full profile. Chat can update listings and profile fields for any user id.",
+    "Click a row to open the full profile. Chat can update name, bio, birthday, or status—email stays fixed once the account exists.",
   SEARCH_PLACEHOLDER: "Search name or email…",
   REFRESH: "Refresh",
   LOADING_DIRECTORY: "Loading directory…",
@@ -229,9 +229,9 @@ export const APP_METADATA_MESSAGES = {
 /** Vercel AI tool descriptions (`chat` route). */
 export const CHAT_TOOL_MESSAGES = {
   GET_MY_PROFILE:
-    "Load the signed-in user's full profile record (name, DOB YYYY-MM-DD, bio).",
+    "Load the signed-in user's full profile record (name, DOB YYYY-MM-DD, bio). Email is shown for reference only; do not submit email changes.",
   UPDATE_MY_PROFILE:
-    "Update ONLY the signed-in user's profile fields. Omit unchanged fields. Empty string clears a field. Date of birth as YYYY-MM-DD.",
+    "Update ONLY the signed-in user's profile fields (name, bio, date of birth). Omit unchanged fields. Empty string clears a field where supported. Date of birth as YYYY-MM-DD. Do not include email—it cannot be updated via this tool. First call returns a preview; the human must reply with \"confirm updateMyProfile\" or approve; call again with the same arguments to apply.",
   LIST_USERS:
     "List every user, newest first (including profile columns).",
   GET_USER: "Fetch one user by id (includes profile columns).",
@@ -239,7 +239,7 @@ export const CHAT_TOOL_MESSAGES = {
   CREATE_USER:
     "Create a directory user with unique email (standard RFC-like syntax; multi-part domains such as example.com.vn or mail.co.uk are valid), full name, and date of birth (YYYY-MM-DD); bio is optional. Default password is Abcd@123.",
   UPDATE_USER:
-    "Update identity, profile, account status (active | inactive), or any combination for any user by id. Omit unchanged fields. Email may use multi-part domains (e.g. example.com.vn). Setting status to inactive signs the user out everywhere.",
+    "Update name, bio, date of birth, or status (active | inactive) for any user by id. Omit unchanged fields. Do not submit email—addresses are fixed after account creation. Setting status to inactive signs the user out everywhere. First call returns a preview; the human must reply with \"confirm updateUser\" or approve; call again with the same arguments to apply.",
   DELETE_USER: "Delete a user by id.",
 } as const;
 

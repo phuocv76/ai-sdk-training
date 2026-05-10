@@ -5,6 +5,8 @@ import { getToolName, isTextUIPart, isToolUIPart } from 'ai';
 import {
   assistantMessageShouldHideProseForDirectoryResultCard,
   CreateUserToolDisplay,
+  directoryToolAwaitingSdkOutput,
+  directoryToolSurfaceIsDeferred,
   GetMyProfileToolDisplay,
   UpdateMyProfileToolDisplay,
   UpdateUserToolDisplay,
@@ -55,6 +57,7 @@ const StreamingDots = () => (
 const assistantBubbleHasVisibleBody = (
   parts: unknown[],
   hideAssistantProse: boolean,
+  streamSettledForBubble: boolean,
 ): boolean => {
   for (const part of parts) {
     if (!isUIPart(part)) continue;
@@ -62,7 +65,12 @@ const assistantBubbleHasVisibleBody = (
       if (!hideAssistantProse && part.text.trim().length > 0) return true;
       continue;
     }
-    if (isToolUIPart(part)) return true;
+    if (isToolUIPart(part)) {
+      if (directoryToolSurfaceIsDeferred(part, streamSettledForBubble)) {
+        continue;
+      }
+      return true;
+    }
   }
   return false;
 };
@@ -89,19 +97,30 @@ export const AssistantChatMessageList = ({
         </div>
       ) : null}
       {messages.map((m, msgIdx) => {
+        const isLast = msgIdx === messages.length - 1;
+        const streamSettledForBubble = !(
+          busy &&
+          isLast &&
+          isAssistantRole(m.role)
+        );
         const hideAssistantTextForDirectoryCard =
           m.role === 'assistant' &&
           assistantMessageShouldHideProseForDirectoryResultCard(m.parts);
 
-        const isLast = msgIdx === messages.length - 1;
+        const awaitingDirectorySdkFinish =
+          isLast &&
+          isAssistantRole(m.role) &&
+          m.parts.some(directoryToolAwaitingSdkOutput);
+
         const streamingThisAssistant =
-          busy &&
           isLast &&
           isAssistantRole(m.role) &&
           !assistantBubbleHasVisibleBody(
             m.parts,
             hideAssistantTextForDirectoryCard,
-          );
+            streamSettledForBubble,
+          ) &&
+          (busy || awaitingDirectorySdkFinish);
 
         return (
           <div
@@ -151,16 +170,40 @@ export const AssistantChatMessageList = ({
                 if (isToolUIPart(part)) {
                   const title = getToolName(part);
                   if (title === 'createUser') {
-                    return <CreateUserToolDisplay key={i} part={part} />;
+                    return (
+                      <CreateUserToolDisplay
+                        key={i}
+                        part={part}
+                        streamSettled={streamSettledForBubble}
+                      />
+                    );
                   }
                   if (title === 'updateUser') {
-                    return <UpdateUserToolDisplay key={i} part={part} />;
+                    return (
+                      <UpdateUserToolDisplay
+                        key={i}
+                        part={part}
+                        streamSettled={streamSettledForBubble}
+                      />
+                    );
                   }
                   if (title === 'updateMyProfile') {
-                    return <UpdateMyProfileToolDisplay key={i} part={part} />;
+                    return (
+                      <UpdateMyProfileToolDisplay
+                        key={i}
+                        part={part}
+                        streamSettled={streamSettledForBubble}
+                      />
+                    );
                   }
                   if (title === 'getMyProfile') {
-                    return <GetMyProfileToolDisplay key={i} part={part} />;
+                    return (
+                      <GetMyProfileToolDisplay
+                        key={i}
+                        part={part}
+                        streamSettled={streamSettledForBubble}
+                      />
+                    );
                   }
                   if (title === 'listUsers') return null;
                   return null;

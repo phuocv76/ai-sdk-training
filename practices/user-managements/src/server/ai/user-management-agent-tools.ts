@@ -192,7 +192,8 @@ export const createUserManagementAgentTools = ({
       description: CHAT_TOOL_MESSAGES.UPDATE_USER,
       inputSchema: updateUserToolInputSchema,
       execute: async (input) => {
-        try {
+        const workflow = createHumanInLoopWorkflow(latestText, 'updateUser');
+        const result = await workflow(input, async () => {
           const { id, ...fields } = input;
           if (fields.status === 'inactive' && id === me.id) {
             throw new Error(API_MESSAGES.CANNOT_DEACTIVATE_SELF_ACCOUNT);
@@ -200,7 +201,6 @@ export const createUserManagementAgentTools = ({
           const user = await updateUser(db, {
             id,
             name: fields.name,
-            email: fields.email,
             bio: fields.bio,
             ...(fields.status !== undefined ? { status: fields.status } : {}),
             ...(fields.date_of_birth !== undefined
@@ -213,13 +213,13 @@ export const createUserManagementAgentTools = ({
               : {}),
           });
           if (!user) throw new Error(API_MESSAGES.USER_NOT_FOUND);
-          return { ok: true as const, user };
-        } catch (error) {
-          return {
-            ok: false as const,
-            error: error instanceof Error ? error.message : String(error),
-          };
+          return user;
+        });
+        if (!result.ok) {
+          if ('requiresConfirmation' in result) return result;
+          return { ok: false as const, error: result.error };
         }
+        return { ok: true as const, user: result.data };
       },
     }),
     deleteUser: tool({

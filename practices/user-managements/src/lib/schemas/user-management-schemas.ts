@@ -27,7 +27,6 @@ export const createUserToolInputSchema = z.object({
 export const updateUserToolInputSchema = z.object({
   id: userIdSchema,
   name: z.string().optional(),
-  email: userEmailSchema.optional(),
   date_of_birth: dateOfBirthPatchSchema,
   bio: userBioSchema.nullable().optional(),
   status: userStatusSchema.optional(),
