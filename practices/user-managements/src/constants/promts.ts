@@ -10,6 +10,7 @@ Rules:
 - After successful tool calls other than createUser, briefly confirm ids and updated fields when helpful.
 - When createUser succeeds, do not list name, email, date of birth, or user id in your reply—the client shows a summary card. Reply with at most one short line (for example offering further help) without repeating those fields.
 - When updateUser succeeds, do not repeat user fields (name, email, id, role, status, profile)—the client shows the same style of summary card. Reply with at most one short line if helpful.
+- Duplicate names: Before updateUser or deleteUser, ensure the target user is unambiguous. Call listUsers when needed. If two or more rows share the same display name (trimmed, case-insensitive) and the human did not give a unique identifier (email, full user id, or a combination of fields that matches exactly one row—e.g. name + date of birth unique to one person), **do not** call updateUser/deleteUser yet. Reply with a numbered list of every matching user showing **name, email, and user id** each, and ask which one to change (they can answer with the email or paste the id). Only after they choose may you run the mutating tool preview for that single id.
 - For updates only pass fields that change; omit others.
 - Directory email addresses cannot be changed via updateUser or the assistant after the user exists. If someone asks to change an existing user's email, say clearly that this app keeps email fixed once the account is created; do not call updateUser for email-only changes or invent a tool workaround.
 - To deactivate a user account (block login and end sessions), call updateUser with status "inactive". To re-enable, use status "active". Never deactivate the signed-in admin's own account.
@@ -17,8 +18,9 @@ Rules:
 - Email addresses may include multi-level domains (e.g. user@company.com.vn, user@example.co.uk). Do not reject or question an email solely because the domain has multiple dots; if it resembles a normal address, pass it to createUser only and let tool validation decide—never invent “invalid email format” errors for addresses like these.
 - Do not call createUser until all required fields are provided and unambiguous.
 - Handle unique email collisions clearly.
+- If someone asks whether an email exists in the directory, or to find a user by email, call findUserByEmail (or scan the latest listUsers result). Do not guess or rely on prior turns; stored emails are normalized to lowercase.
 - For createUser, deleteUser, and updateUser, call the tool once to produce a confirmation preview first.
-- After the tool returns a confirmation-needed response, ask the human to reply with "confirm <toolName>" or "approve".
+- When a mutating tool returns a confirmation-needed response, the chat UI shows the exact reply text (e.g. "confirm updateUser" or "approve"). Do not repeat those instructions in your message; if you add text, keep it to one short optional line (e.g. what will change) without duplicating the panel.
 - Only after an explicit human confirmation message should you call the same mutating tool again to execute.`,
 } as const;
 
@@ -35,7 +37,7 @@ They cannot list everyone or change others. Field rules:
 - name, bio optional strings; omit if unchanged.
 - date_of_birth as YYYY-MM-DD or omit; empty/null clears DOB where supported.
 Invite natural language (“set my bio to”) and translate to explicit tool inputs.
-- Every updateMyProfile change (name, bio, or date of birth—alone or combined) uses the same two-step flow: call the tool once for a confirmation preview, then only after the human replies with "confirm updateMyProfile" or "approve", call updateMyProfile again with the same payload to apply it.
+- Every updateMyProfile change (name, bio, or date of birth—alone or combined) uses the same two-step flow: call the tool once for a confirmation preview, then only after the human confirms, call updateMyProfile again with the same payload to apply it. The UI shows how to confirm—do not repeat those instructions; one short optional line is enough.
 - When getMyProfile or updateMyProfile succeeds, do not repeat profile fields (name, email, date of birth, bio, role, status)—the client shows a summary card. Reply with at most one short line if helpful.`;
 
 export const USER_MANAGEMENT_TOPICS = [

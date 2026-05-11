@@ -13,6 +13,7 @@ import type {
 
 import {
   ACCOUNT_MESSAGES,
+  CHAT_HUMAN_CONFIRM_MESSAGES,
   DASHBOARD_MESSAGES,
   PROFILE_UI_MESSAGES,
   UI_SYMBOLS,
@@ -65,15 +66,310 @@ const parseListUsersToolOutput = (output: unknown): ClientUser[] | null => {
   return users;
 };
 
+/** Human-readable tool title in confirmation previews (matches internal ids in CHAT tooling). */
+const confirmationToolHeading = (toolId: string): string => {
+  switch (toolId) {
+    case "createUser":
+      return DASHBOARD_MESSAGES.ASSISTANT_CONFIRM_HEADING_CREATE_USER;
+    case "updateUser":
+      return DASHBOARD_MESSAGES.ASSISTANT_CONFIRM_HEADING_UPDATE_USER;
+    case "updateMyProfile":
+      return DASHBOARD_MESSAGES.ASSISTANT_CONFIRM_HEADING_UPDATE_MY_PROFILE;
+    default:
+      return toolId;
+  }
+};
+
 const parseConfirmationOutput = (output: unknown): {
   message: string;
   hint: string;
+  preview: unknown;
 } | null => {
   if (!output || typeof output !== "object") return null;
   const o = output as Record<string, unknown>;
   if (o.requiresConfirmation !== true) return null;
   if (typeof o.message !== "string" || typeof o.hint !== "string") return null;
-  return { message: o.message, hint: o.hint };
+  return {
+    message: o.message,
+    hint: o.hint,
+    preview: "preview" in o ? o.preview : undefined,
+  };
+};
+
+/** `updateUser` / `deleteUser` blocked until the admin picks a row among duplicate display names. */
+const parseAmbiguousDuplicateNameOutput = (output: unknown): {
+  matches: ClientUser[];
+  message: string;
+  hint: string;
+} | null => {
+  if (!output || typeof output !== "object") return null;
+  const o = output as Record<string, unknown>;
+  if (o.ambiguousDisplayName !== true) return null;
+  if (typeof o.message !== "string" || typeof o.hint !== "string") return null;
+  const raw = o.matches;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const matches: ClientUser[] = [];
+  for (const item of raw) {
+    const u = tryParseClientUser(item);
+    if (!u) return null;
+    matches.push(u);
+  }
+  return { matches, message: o.message, hint: o.hint };
+};
+
+const AmbiguousDuplicateNamePanel = ({
+  toolHeading,
+  matches,
+  message,
+  hint,
+}: {
+  toolHeading: string;
+  matches: ClientUser[];
+  message: string;
+  hint: string;
+}) => (
+  <div className="space-y-2">
+    <div className="rounded-xl border border-amber-400/35 bg-gradient-to-b from-amber-50/90 to-[var(--dash-card)] px-3 py-3 text-sm shadow-sm dark:border-amber-500/25 dark:from-amber-950/30">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+        {DASHBOARD_MESSAGES.DIRECTORY_DUPLICATE_NAME_PANEL_BADGE}
+      </p>
+      <p className="mt-1 text-xs text-[var(--dash-muted)]">· {toolHeading}</p>
+      <ol className="mt-3 list-decimal space-y-3 pl-4 marker:font-semibold marker:text-amber-800 dark:marker:text-amber-200">
+        {matches.map((u) => {
+          const dob =
+            u.date_of_birth && u.date_of_birth.trim() !== "" ?
+              u.date_of_birth
+            : UI_SYMBOLS.EM_DASH;
+          const bioPeek =
+            u.bio?.trim() ?
+              u.bio.length > 160 ?
+                `${u.bio.trim().slice(0, 160)}…`
+              : u.bio.trim()
+            : UI_SYMBOLS.EM_DASH;
+          return (
+            <li key={u.id}>
+              <div className="rounded-lg border border-[var(--dash-border)] bg-[var(--background)]/60 px-3 py-2 text-xs text-[var(--foreground)]">
+                <p>
+                  <span className="font-medium text-[var(--foreground)]/80">
+                    {PROFILE_UI_MESSAGES.NAME_LABEL}
+                  </span>{" "}
+                  <span>{u.name}</span>
+                </p>
+                <p className="break-all">
+                  <span className="font-medium text-[var(--foreground)]/80">
+                    {PROFILE_UI_MESSAGES.EMAIL_LABEL}
+                  </span>{" "}
+                  <span>{u.email}</span>
+                </p>
+                <p className="break-all font-mono text-[11px] text-[var(--dash-muted)]">
+                  <span className="font-medium text-[var(--foreground)]/80">
+                    {CHAT_HUMAN_CONFIRM_MESSAGES.PREVIEW_USER_ID_LABEL}
+                  </span>{" "}
+                  <span>{u.id}</span>
+                </p>
+                <p>
+                  <span className="font-medium text-[var(--foreground)]/80">
+                    {PROFILE_UI_MESSAGES.DATE_OF_BIRTH_LABEL}
+                  </span>{" "}
+                  <span>{dob}</span>
+                </p>
+                <p>
+                  <span className="font-medium text-[var(--foreground)]/80">
+                    {PROFILE_UI_MESSAGES.BIO_LABEL}
+                  </span>{" "}
+                  <span className="whitespace-pre-wrap">{bioPeek}</span>
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+    <p className="whitespace-pre-wrap leading-relaxed text-sm text-[var(--foreground)]">
+      {renderInlineMarkdownBold(message)}
+    </p>
+    <p className="whitespace-pre-wrap leading-relaxed text-sm text-[var(--dash-muted)]">
+      {renderInlineMarkdownBold(hint)}
+    </p>
+  </div>
+);
+
+const previewDetailLine = (key: string, label: string, value: string) => (
+  <p key={key}>
+    <span className="font-medium text-[var(--foreground)]/80">{label}</span>{" "}
+    <span className="break-words">{value}</span>
+  </p>
+);
+
+/** Renders structured tool `preview` like user-requested fields (human-in-the-loop). */
+function formatDirectoryToolConfirmationPreview(
+  toolId: string,
+  preview: unknown,
+): ReactNode {
+  if (!preview || typeof preview !== "object") return null;
+  const p = preview as Record<string, unknown>;
+  const lines: ReactNode[] = [];
+
+  const pushStringLine = (
+    key: string,
+    label: string,
+    raw: unknown,
+    optional: boolean,
+  ) => {
+    if (optional && raw === undefined) return;
+    if (!optional && typeof raw !== "string") return;
+    const text =
+      raw === undefined || raw === null ? UI_SYMBOLS.EM_DASH
+      : typeof raw === "string" ?
+        raw.trim() || UI_SYMBOLS.EM_DASH
+      : String(raw);
+    lines.push(previewDetailLine(key, label, text));
+  };
+
+  if (toolId === "createUser") {
+    if (
+      typeof p.name !== "string" ||
+      typeof p.email !== "string" ||
+      typeof p.date_of_birth !== "string"
+    ) {
+      return null;
+    }
+    pushStringLine("name", PROFILE_UI_MESSAGES.NAME_LABEL, p.name, false);
+    pushStringLine("email", PROFILE_UI_MESSAGES.EMAIL_LABEL, p.email, false);
+    pushStringLine(
+      "dob",
+      PROFILE_UI_MESSAGES.DATE_OF_BIRTH_LABEL,
+      p.date_of_birth,
+      false,
+    );
+    if (
+      typeof p.bio === "string" &&
+      (p.bio as string).trim() !== ""
+    ) {
+      pushStringLine("bio", PROFILE_UI_MESSAGES.BIO_LABEL, p.bio, false);
+    }
+    return lines.length > 0 ? <div className="space-y-1">{lines}</div> : null;
+  }
+
+  if (toolId === "updateUser") {
+    if (typeof p.id !== "string") return null;
+    lines.push(
+      previewDetailLine(
+        "id",
+        CHAT_HUMAN_CONFIRM_MESSAGES.PREVIEW_USER_ID_LABEL,
+        p.id,
+      ),
+    );
+    if ("name" in p) pushStringLine("name", PROFILE_UI_MESSAGES.NAME_LABEL, p.name, true);
+    if ("date_of_birth" in p) {
+      const d = p.date_of_birth;
+      const display =
+        d === null || d === "" ? UI_SYMBOLS.EM_DASH
+        : typeof d === "string" ? d
+        : UI_SYMBOLS.EM_DASH;
+      lines.push(
+        previewDetailLine(
+          "dob",
+          PROFILE_UI_MESSAGES.DATE_OF_BIRTH_LABEL,
+          display,
+        ),
+      );
+    }
+    if ("bio" in p) {
+      const b = p.bio;
+      const display =
+        b === null || b === "" ? UI_SYMBOLS.EM_DASH
+        : typeof b === "string" ? (b.trim() || UI_SYMBOLS.EM_DASH)
+        : UI_SYMBOLS.EM_DASH;
+      lines.push(previewDetailLine("bio", PROFILE_UI_MESSAGES.BIO_LABEL, display));
+    }
+    if (
+      p.status === "inactive" ||
+      p.status === "active"
+    ) {
+      lines.push(
+        previewDetailLine(
+          "status",
+          PROFILE_UI_MESSAGES.STATUS_LABEL,
+          p.status === "inactive" ?
+            DASHBOARD_MESSAGES.ROW_STATUS_INACTIVE
+          : DASHBOARD_MESSAGES.ROW_STATUS_ACTIVE,
+        ),
+      );
+    }
+    return lines.length > 0 ? <div className="space-y-1">{lines}</div> : null;
+  }
+
+  if (toolId === "updateMyProfile") {
+    if ("name" in p) {
+      pushStringLine("name", PROFILE_UI_MESSAGES.NAME_LABEL, p.name, true);
+    }
+    if ("date_of_birth" in p) {
+      const d = p.date_of_birth;
+      const display =
+        d === null || d === "" ? UI_SYMBOLS.EM_DASH
+        : typeof d === "string" ? d
+        : UI_SYMBOLS.EM_DASH;
+      lines.push(
+        previewDetailLine(
+          "dob",
+          PROFILE_UI_MESSAGES.DATE_OF_BIRTH_LABEL,
+          display,
+        ),
+      );
+    }
+    if ("bio" in p) {
+      const b = p.bio;
+      const display =
+        b === null || b === "" ? UI_SYMBOLS.EM_DASH
+        : typeof b === "string" ? (b.trim() || UI_SYMBOLS.EM_DASH)
+        : UI_SYMBOLS.EM_DASH;
+      lines.push(previewDetailLine("bio", PROFILE_UI_MESSAGES.BIO_LABEL, display));
+    }
+    return lines.length > 0 ? <div className="space-y-1">{lines}</div> : null;
+  }
+
+  return null;
+}
+
+const DirectoryHumanConfirmPanel = ({
+  toolId,
+  heading,
+  message,
+  hint,
+  preview,
+}: {
+  toolId: string;
+  heading: string;
+  message: string;
+  hint: string;
+  preview: unknown;
+}) => {
+  const previewLines = formatDirectoryToolConfirmationPreview(toolId, preview);
+  return (
+    <div className="space-y-2">
+      {previewLines ?
+        <div
+          className="rounded-xl border border-[var(--dash-accent)]/25 bg-[var(--dash-accent-soft)] px-3 py-2.5 text-sm text-[var(--foreground)] shadow-sm"
+          aria-label={heading}
+        >
+          <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-[11px] font-semibold tracking-wide text-[var(--dash-accent)]">
+              {DASHBOARD_MESSAGES.LABEL_YOU}
+            </span>
+            <span className="text-[11px] text-[var(--dash-muted)]">· {heading}</span>
+          </div>
+          <div className="leading-relaxed">{previewLines}</div>
+        </div>
+      : null}
+      <p className="whitespace-pre-wrap leading-relaxed text-sm text-[var(--foreground)]">
+        {renderInlineMarkdownBold(message)}
+      </p>
+      <p className="whitespace-pre-wrap leading-relaxed text-sm text-[var(--dash-muted)]">
+        {renderInlineMarkdownBold(hint)}
+      </p>
+    </div>
+  );
 };
 
 const ToolPendingCard = ({
@@ -130,11 +426,22 @@ export const directoryToolAwaitingSdkOutput = (part: unknown): boolean => {
 
 /**
  * When true, assistant prose for this message is hidden so tool UI (cards, dots) carries the update.
- * Keeps prose for createUser / updateMyProfile confirmation previews where the UI hides the confirm card.
+ * Confirmation previews use the dashed tool panel only (no duplicated model prose).
  */
 export const assistantMessageShouldHideProseForDirectoryResultCard = (
   parts: unknown[],
 ): boolean => {
+  for (const raw of parts) {
+    if (!isToolUIPart(raw as UIMessagePart<UIDataTypes, UITools>)) continue;
+    const part = raw as ToolUIPart | DynamicToolUIPart;
+    if (part.state !== "output-available") continue;
+    if ("preliminary" in part && part.preliminary === true) continue;
+    if (getToolName(part) === "deleteUser") {
+      const outDel = "output" in part ? part.output : undefined;
+      if (parseAmbiguousDuplicateNameOutput(outDel)) return true;
+    }
+  }
+
   for (const raw of parts) {
     if (!isToolUIPart(raw as UIMessagePart<UIDataTypes, UITools>)) continue;
     const part = raw as ToolUIPart | DynamicToolUIPart;
@@ -148,11 +455,14 @@ export const assistantMessageShouldHideProseForDirectoryResultCard = (
       return true;
     }
     const out = "output" in part ? part.output : undefined;
+    if (
+      toolName === "updateUser" &&
+      parseAmbiguousDuplicateNameOutput(out)
+    ) {
+      return true;
+    }
     const confirmation = parseConfirmationOutput(out);
     if (confirmation) {
-      if (toolName === "createUser" || toolName === "updateMyProfile") {
-        continue;
-      }
       return true;
     }
     if (
@@ -304,9 +614,9 @@ const UserResultCard = ({
           {PROFILE_UI_MESSAGES.JOINED_LABEL} · {formatJoinedLine(user.created_at)}
         </p>
       </div>
-      <div className="flex items-start gap-2 text-emerald-700 dark:text-emerald-400">
+      <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
         <span
-          className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"
+          className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"
           aria-hidden
         >
           <svg
@@ -332,7 +642,6 @@ const UserDirectoryToolDisplay = ({
   pendingMessage: _pendingMessage,
   cardVariant,
   parseOutput = parseOkUserToolOutput,
-  hideConfirmationOutput = false,
   failedFallback,
   streamSettled,
 }: {
@@ -341,7 +650,6 @@ const UserDirectoryToolDisplay = ({
   pendingMessage: string;
   cardVariant: "invited" | "updated" | "profile-loaded" | "profile-updated";
   parseOutput?: (output: unknown) => ClientUser | null;
-  hideConfirmationOutput?: boolean;
   failedFallback?: ReactNode;
   /** When false (streaming the latest assistant bubble), defer all tool chrome until the turn completes. */
   streamSettled: boolean;
@@ -364,19 +672,26 @@ const UserDirectoryToolDisplay = ({
   }
 
   const output = "output" in part ? part.output : undefined;
+  const ambiguous = parseAmbiguousDuplicateNameOutput(output);
+  if (ambiguous && title === "updateUser") {
+    return (
+      <AmbiguousDuplicateNamePanel
+        toolHeading={confirmationToolHeading(title)}
+        matches={ambiguous.matches}
+        message={ambiguous.message}
+        hint={ambiguous.hint}
+      />
+    );
+  }
   const confirmation = parseConfirmationOutput(output);
   if (confirmation) {
-    if (hideConfirmationOutput) return null;
     return (
-      <ToolPendingCard
-        title={title}
-        message={
-          <>
-            {renderInlineMarkdownBold(confirmation.message)}
-            <br />
-            {renderInlineMarkdownBold(confirmation.hint)}
-          </>
-        }
+      <DirectoryHumanConfirmPanel
+        toolId={title}
+        heading={confirmationToolHeading(title)}
+        message={confirmation.message}
+        hint={confirmation.hint}
+        preview={confirmation.preview}
       />
     );
   }
@@ -405,7 +720,6 @@ export const CreateUserToolDisplay = ({
     part={part}
     pendingMessage={DASHBOARD_MESSAGES.CREATE_USER_TOOL_PENDING}
     cardVariant="invited"
-    hideConfirmationOutput
     streamSettled={streamSettled}
   />
 );
@@ -426,6 +740,41 @@ export const UpdateUserToolDisplay = ({
   />
 );
 
+/** Duplicate-name guard panel for `deleteUser` only (successful deletes stay prose-only). */
+export const DuplicateDisplayNameBlockedDisplay = ({
+  part,
+  streamSettled,
+}: {
+  part: AssistantToolPart;
+  streamSettled: boolean;
+}) => {
+  const title = getToolName(part);
+  if (title !== "deleteUser") return null;
+
+  const state =
+    "state" in part && typeof part.state === "string" ? part.state : "";
+  const outputIsPreliminary =
+    state === "output-available" &&
+    "preliminary" in part &&
+    part.preliminary === true;
+
+  if (!streamSettled || outputIsPreliminary) return null;
+  if (state !== "output-available") return null;
+
+  const output = "output" in part ? part.output : undefined;
+  const ambiguous = parseAmbiguousDuplicateNameOutput(output);
+  if (!ambiguous) return null;
+
+  return (
+    <AmbiguousDuplicateNamePanel
+      toolHeading={confirmationToolHeading(title)}
+      matches={ambiguous.matches}
+      message={ambiguous.message}
+      hint={ambiguous.hint}
+    />
+  );
+};
+
 /** Rich UI for successful `updateMyProfile` (same `{ ok, user }` payload as updateUser). */
 export const UpdateMyProfileToolDisplay = ({
   part,
@@ -438,7 +787,6 @@ export const UpdateMyProfileToolDisplay = ({
     part={part}
     pendingMessage={DASHBOARD_MESSAGES.UPDATE_MY_PROFILE_TOOL_PENDING}
     cardVariant="profile-updated"
-    hideConfirmationOutput
     streamSettled={streamSettled}
   />
 );

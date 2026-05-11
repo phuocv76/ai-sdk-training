@@ -48,3 +48,7 @@ export const loginBodySchema = z.object({
   email: userEmailSchema,
   password: loginPasswordSchema,
 });
+
+export const findUserByEmailPayloadSchema = z.object({
+  email: userEmailSchema,
+});

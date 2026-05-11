@@ -16,6 +16,7 @@ import {
   wrapUserManagementOllamaChatModel,
 } from '@/server/ai/chat-language-model';
 import { requireDatabase, resolveSessionUser } from '@/server/auth/cookies';
+import { sanitizeChatUiMessagesForValidation } from '@/server/ai/sanitize-chat-ui-messages';
 import { createUserManagementAgent } from '@/server/ai/user-management-agent';
 import { USER_MANAGEMENT_TOPICS } from '@/constants/promts';
 
@@ -186,9 +187,11 @@ export const handleChatPost = async (req: Request): Promise<Response> => {
       latestText,
     });
 
+    const uiMessages = sanitizeChatUiMessagesForValidation(body.messages);
+
     return await createAgentUIStreamResponse({
       agent,
-      uiMessages: body.messages,
+      uiMessages,
       abortSignal: req.signal,
       onError: handleChatAiStreamError,
     });

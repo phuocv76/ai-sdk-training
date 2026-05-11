@@ -4,15 +4,18 @@ import { tool } from 'ai';
 // Constants
 import {
   API_MESSAGES,
+  CHAT_HUMAN_CONFIRM_MESSAGES,
   CHAT_TOOL_MESSAGES,
   USER_DOMAIN_ERRORS,
 } from '@/constants/messages';
 
 // Domain
+import { userLatestTextIdentifiesDirectoryRecord } from '@/lib/directory/display-name-match';
 import { userResponseBody, type User } from '@/lib/domain/user';
 import {
   createUserToolInputSchema,
   emptyObjectSchema,
+  findUserByEmailPayloadSchema,
   updateMyProfileToolInputSchema,
   updateUserToolInputSchema,
   userIdPayloadSchema,
@@ -23,7 +26,9 @@ import {
   createUser,
   deleteUser,
   getUser,
+  getUserByEmail,
   listUsers,
+  listUsersSharingDisplayNameKey,
   updateMemberProfile,
   updateUser,
 } from '@/server/users/repository';
@@ -57,15 +62,42 @@ const isHumanConfirmation = (text: string): boolean => {
   );
 };
 
-/** Standardized confirmation instruction returned in preview responses. */
-const approvalHint = (action: string): string => {
-  return `Reply with "confirm ${action}" (or "approve") to execute this action.`;
+/**
+ * Blocks directory mutations against an arbitrary id when several users share the
+ * display name unless the latest user message already identifies that row.
+ */
+type DuplicateDirectoryNameGate =
+  | { kind: 'proceed' }
+  | {
+      kind: 'ambiguous';
+      matches: ReturnType<typeof userResponseBody>[];
+      message: string;
+      hint: string;
+    };
+
+const rejectDuplicateDirectoryNameUnlessDisambiguated = async (
+  db: D1Database,
+  latestText: string,
+  target: User,
+): Promise<DuplicateDirectoryNameGate> => {
+  if (isHumanConfirmation(latestText)) return { kind: 'proceed' };
+
+  const shared = await listUsersSharingDisplayNameKey(db, target.name);
+  if (shared.length <= 1) return { kind: 'proceed' };
+
+  if (userLatestTextIdentifiesDirectoryRecord(latestText, target)) {
+    return { kind: 'proceed' };
+  }
+
+  return {
+    kind: 'ambiguous',
+    matches: shared.map(userResponseBody),
+    message: CHAT_HUMAN_CONFIRM_MESSAGES.DUPLICATE_DISPLAY_NAME_BLOCKED,
+    hint: CHAT_HUMAN_CONFIRM_MESSAGES.DUPLICATE_DISPLAY_NAME_HINT,
+  };
 };
 
-/**
- * Wraps a mutating operation with a human-in-the-loop confirmation gate.
- * Returns a preview payload until the user explicitly confirms.
- */
+/** Human-in-loop confirmation preview until the latest user message approves execution. */
 const createHumanInLoopWorkflow: (
   latestText: string,
   action: string,
@@ -79,8 +111,8 @@ const createHumanInLoopWorkflow: (
         ok: false,
         requiresConfirmation: true,
         action,
-        message: `Awaiting your confirmation before running ${action}.`,
-        hint: approvalHint(action),
+        message: CHAT_HUMAN_CONFIRM_MESSAGES.AWAITING,
+        hint: CHAT_HUMAN_CONFIRM_MESSAGES.HOW_TO_REPLY,
         preview: input,
       };
     }
@@ -171,6 +203,20 @@ export const createUserManagementAgentTools = ({
         return user ?? { notFound: true, id };
       },
     }),
+    findUserByEmail: tool({
+      description: CHAT_TOOL_MESSAGES.FIND_USER_BY_EMAIL,
+      inputSchema: findUserByEmailPayloadSchema,
+      execute: async ({ email }) => {
+        const user = await getUserByEmail(db, email);
+        if (!user) {
+          return {
+            notFound: true as const,
+            emailSearched: email.trim().toLowerCase(),
+          };
+        }
+        return { user: userResponseBody(user) };
+      },
+    }),
   } as const;
 
   const adminTools = {
@@ -192,6 +238,23 @@ export const createUserManagementAgentTools = ({
       description: CHAT_TOOL_MESSAGES.UPDATE_USER,
       inputSchema: updateUserToolInputSchema,
       execute: async (input) => {
+        const target = await getUser(db, input.id);
+        if (!target) return { ok: false as const, error: API_MESSAGES.USER_NOT_FOUND };
+
+        const dup = await rejectDuplicateDirectoryNameUnlessDisambiguated(
+          db,
+          latestText,
+          target,
+        );
+        if (dup.kind === 'ambiguous') {
+          return {
+            ambiguousDisplayName: true as const,
+            matches: dup.matches,
+            message: dup.message,
+            hint: dup.hint,
+          };
+        }
+
         const workflow = createHumanInLoopWorkflow(latestText, 'updateUser');
         const result = await workflow(input, async () => {
           const { id, ...fields } = input;
@@ -226,6 +289,23 @@ export const createUserManagementAgentTools = ({
       description: CHAT_TOOL_MESSAGES.DELETE_USER,
       inputSchema: userIdPayloadSchema,
       execute: async (input) => {
+        const target = await getUser(db, input.id);
+        if (!target) return { ok: false as const, error: API_MESSAGES.USER_NOT_FOUND };
+
+        const dup = await rejectDuplicateDirectoryNameUnlessDisambiguated(
+          db,
+          latestText,
+          target,
+        );
+        if (dup.kind === 'ambiguous') {
+          return {
+            ambiguousDisplayName: true as const,
+            matches: dup.matches,
+            message: dup.message,
+            hint: dup.hint,
+          };
+        }
+
         const workflow = createHumanInLoopWorkflow(latestText, 'deleteUser');
         const result = await workflow(input, async () => {
           const { deleted } = await deleteUser(db, input.id);

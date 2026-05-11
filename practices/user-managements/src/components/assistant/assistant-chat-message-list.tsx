@@ -7,6 +7,7 @@ import {
   CreateUserToolDisplay,
   directoryToolAwaitingSdkOutput,
   directoryToolSurfaceIsDeferred,
+  DuplicateDisplayNameBlockedDisplay,
   GetMyProfileToolDisplay,
   UpdateMyProfileToolDisplay,
   UpdateUserToolDisplay,
@@ -199,6 +200,15 @@ export const AssistantChatMessageList = ({
                   if (title === 'getMyProfile') {
                     return (
                       <GetMyProfileToolDisplay
+                        key={i}
+                        part={part}
+                        streamSettled={streamSettledForBubble}
+                      />
+                    );
+                  }
+                  if (title === 'deleteUser') {
+                    return (
+                      <DuplicateDisplayNameBlockedDisplay
                         key={i}
                         part={part}
                         streamSettled={streamSettledForBubble}

@@ -2,6 +2,7 @@
 import { USER_DOMAIN_ERRORS } from "@/constants/messages";
 
 // Domain
+import { normalizeDirectoryDisplayNameKey } from "@/lib/directory/display-name-match";
 import type { User, UserRole, UserStatus } from "@/lib/domain/user";
 
 // Server
@@ -97,6 +98,20 @@ export const listUsers = async (db: D1Database): Promise<User[]> => {
 };
 
 /**
+ * Everyone whose display name matches `name` using {@link normalizeDirectoryDisplayNameKey}.
+ */
+export const listUsersSharingDisplayNameKey = async (
+  db: D1Database,
+  name: string,
+): Promise<User[]> => {
+  const key = normalizeDirectoryDisplayNameKey(name);
+  const all = await listUsers(db);
+  return all.filter(
+    (u) => normalizeDirectoryDisplayNameKey(u.name) === key,
+  );
+};
+
+/**
  * Loads a single user by primary key.
  * @param prisma Active Prisma client.
  * @param id User id (UUID).
@@ -111,6 +126,23 @@ export const getUser = async (
       "SELECT id, name, email, role, status, created_at, date_of_birth, bio FROM users WHERE id = ?1 LIMIT 1",
     )
     .bind(id)
+    .first()) as UserAttrs | null;
+  return row ? mapPrismaUser(row) : null;
+};
+
+/**
+ * Loads a directory user by email using the same normalization as login/signup (`trim`, lowercase).
+ */
+export const getUserByEmail = async (
+  db: D1Database,
+  email: string,
+): Promise<User | null> => {
+  const norm = email.trim().toLowerCase();
+  const row = (await db
+    .prepare(
+      "SELECT id, name, email, role, status, created_at, date_of_birth, bio FROM users WHERE email = ?1 LIMIT 1",
+    )
+    .bind(norm)
     .first()) as UserAttrs | null;
   return row ? mapPrismaUser(row) : null;
 };

@@ -198,11 +198,17 @@ export const DASHBOARD_MESSAGES = {
   UPDATE_USER_TOOL_PENDING: "Updating user…",
   UPDATE_MY_PROFILE_TOOL_PENDING: "Updating your profile…",
   GET_MY_PROFILE_TOOL_PENDING: "Loading your profile…",
+  /** Tool panel headings for confirmation previews (human-readable, not internal tool ids). */
+  ASSISTANT_CONFIRM_HEADING_CREATE_USER: "Create user",
+  ASSISTANT_CONFIRM_HEADING_UPDATE_USER: "Update user",
+  ASSISTANT_CONFIRM_HEADING_UPDATE_MY_PROFILE: "Update profile",
   MEMBER_PROFILE_CARD_BADGE: "Your profile",
   MEMBER_PROFILE_LOADED_SUCCESS_LINE:
     "Here’s your profile as stored in the directory.",
   MEMBER_PROFILE_UPDATED_CARD_BADGE: "Profile updated",
   MEMBER_PROFILE_UPDATED_SUCCESS_LINE: "Your profile has been saved.",
+  /** Assistant tool panel when several directory rows share a display name for the same mutation. */
+  DIRECTORY_DUPLICATE_NAME_PANEL_BADGE: "Same name · multiple accounts",
 } as const;
 
 /** User profile drawer and field labels. */
@@ -222,6 +228,24 @@ export const PROFILE_UI_MESSAGES = {
   PROFILE_LOAD_FAILED: "Could not load this profile.",
 } as const;
 
+/**
+ * Copy for human-in-the-loop tool previews (shown in the assistant panel).
+ * Deliberately avoids internal tool ids like `updateUser`—those are implementation details.
+ */
+export const CHAT_HUMAN_CONFIRM_MESSAGES = {
+  AWAITING:
+    "Nothing has been applied yet. Confirm when you want to go ahead with this change.",
+  HOW_TO_REPLY:
+    "Send approve, yes, ok, or any message that includes the word confirm.",
+  /** Directory tool confirmation previews (structured `preview` from the server). */
+  PREVIEW_USER_ID_LABEL: "User ID",
+  /** Server rejects update/delete preview when ≥2 rows share this display name and the message doesn't identify one row by email/id/DOB. */
+  DUPLICATE_DISPLAY_NAME_BLOCKED:
+    "More than one directory account uses this name. Below are all matching rows. Repeat your change using **email** or **user id** (or cite the same date of birth shown here) so the right record is targeted.",
+  DUPLICATE_DISPLAY_NAME_HINT:
+    "Example: “Set bio for some.one@company.com to …” Then confirm only when the preview matches that row.",
+} as const;
+
 /** Next.js metadata (layout). */
 export const APP_METADATA_MESSAGES = {
   TITLE: "User Managements supported by AI assistant",
@@ -236,14 +260,17 @@ export const CHAT_TOOL_MESSAGES = {
   UPDATE_MY_PROFILE:
     "Update ONLY the signed-in user's profile fields (name, bio, date of birth). Omit unchanged fields. Empty string clears a field where supported. Date of birth as YYYY-MM-DD. Do not include email—it cannot be updated via this tool. First call returns a preview; the human must reply with \"confirm updateMyProfile\" or approve; call again with the same arguments to apply.",
   LIST_USERS:
-    "List every user, newest first (including profile columns).",
+    "List every user, newest first (including profile columns). Use this to resolve duplicate display names before updateUser/deleteUser: compare names case-insensitively with trim. For a single email existence check, prefer findUserByEmail.",
   GET_USER: "Fetch one user by id (includes profile columns).",
+  FIND_USER_BY_EMAIL:
+    "Look up one directory user by email (trimmed and compared case-insensitively, same as sign-in). Use this whenever the human asks whether an address exists, who has an email, or similar—then answer only from this tool’s result (or from listUsers if you already listed). Never claim an email is or is not in the directory without tool output.",
   USER_ID_PARAM: "User id (UUID)",
   CREATE_USER:
     "Create a directory user with unique email (standard RFC-like syntax; multi-part domains such as example.com.vn or mail.co.uk are valid), full name, and date of birth (YYYY-MM-DD); bio is optional. Default password is Abcd@123.",
   UPDATE_USER:
-    "Update name, bio, date of birth, or status (active | inactive) for any user by id. Omit unchanged fields. Do not submit email—addresses are fixed after account creation. Setting status to inactive signs the user out everywhere. First call returns a preview; the human must reply with \"confirm updateUser\" or approve; call again with the same arguments to apply.",
-  DELETE_USER: "Delete a user by id.",
+    "Update name, bio, date of birth, or status (active | inactive) for exactly one user id. Do not pick an id when several users share the same name unless the directory has already been narrowed to one match or the human specified email/uuid/uniquely identifying fields—otherwise list matching users (via listUsers) and wait for them to choose. Omit unchanged patch fields. Do not submit email—addresses are fixed after account creation. Setting status to inactive signs the user out everywhere. First call returns a preview; the human must reply with \"confirm updateUser\" or approve; call again with the same arguments to apply.",
+  DELETE_USER:
+    "Delete one user by id. Same ambiguity rule as updateUser: if multiple users share the asked-for name without a distinguishing email or id given, list matches from listUsers and wait for explicit choice before deleteUser.",
 } as const;
 
 /** Canonical HTTP header names shared by the chat API and client transport. */
