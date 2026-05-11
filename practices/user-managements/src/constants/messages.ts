@@ -88,7 +88,7 @@ export const AUTH_SESSION_MESSAGES = {
 /** Dashboard shell (sidebar + header chrome). */
 export const DASHBOARD_SHELL_MESSAGES = {
   SIDEBAR_ARIA_MAIN_NAV: "Main navigation",
-  SIGNED_IN_SUBTITLE: "Signed-in account · D1 + AI",
+  SIGNED_IN_SUBTITLE: "Signed-in account  to trying the AI assistant",
   TECH_STACK_NOTE: "Cloudflare D1 · OpenNext · Vercel AI SDK",
   NOTIFICATIONS_ARIA: "Notifications",
 } as const;
@@ -224,9 +224,9 @@ export const PROFILE_UI_MESSAGES = {
 
 /** Next.js metadata (layout). */
 export const APP_METADATA_MESSAGES = {
-  TITLE: "User Management · AI + D1",
+  TITLE: "User Managements supported by AI assistant",
   DESCRIPTION:
-    "Chat-driven user CRUD with Vercel AI SDK, Next.js, and Cloudflare D1.",
+    "Chat-driven user CRUD with Vercel AI SDK, Next.js, and Cloudflare D1. Supported by AI assistant.",
 } as const;
 
 /** Vercel AI tool descriptions (`chat` route). */
