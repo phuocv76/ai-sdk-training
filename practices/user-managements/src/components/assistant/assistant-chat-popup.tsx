@@ -99,7 +99,7 @@ export const AssistantChatPopup = ({
         >
           <header className="border-b border-[var(--dash-border)] p-4">
             <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 flex-nowrap items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--dash-accent-soft)]">
                   <svg
                     className="h-5 w-5 text-[var(--dash-accent)]"
@@ -115,61 +115,63 @@ export const AssistantChatPopup = ({
                     />
                   </svg>
                 </div>
-                <h2 className="min-w-0 text-sm font-semibold tracking-tight sm:text-base">
+                <h2 className="min-w-0 flex-1 text-sm font-semibold tracking-tight sm:text-base">
                   {title}
                 </h2>
               </div>
 
-              <label className="flex w-full min-w-0 flex-col gap-1.5 text-xs text-[var(--dash-muted)] sm:flex-row sm:items-center sm:gap-2">
-                <span className="shrink-0 whitespace-nowrap">
-                  {DASHBOARD_MESSAGES.AI_PROVIDER_LABEL}
-                </span>
-                <select
-                  value={aiProvider}
-                  onChange={(e) =>
-                    onAiProviderChange(
-                      e.target.value === CHAT_AI_PROVIDER.OLLAMA ?
-                        CHAT_AI_PROVIDER.OLLAMA
-                      : CHAT_AI_PROVIDER.OPENAI,
-                    )
-                  }
-                  disabled={busy}
-                  className="min-w-0 flex-1 rounded-lg border border-[var(--dash-border)] bg-[var(--background)] px-2 py-1.5 text-xs font-semibold text-[var(--foreground)] disabled:opacity-50"
-                >
-                  <option value={CHAT_AI_PROVIDER.OPENAI}>
-                    {DASHBOARD_MESSAGES.AI_PROVIDER_OPENAI}
-                  </option>
-                  <option value={CHAT_AI_PROVIDER.OLLAMA}>
-                    {DASHBOARD_MESSAGES.AI_PROVIDER_OLLAMA}
-                  </option>
-                </select>
-              </label>
+              <div className="flex min-w-0 w-full flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                <label className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--dash-muted)]">
+                  <span className="shrink-0 whitespace-nowrap">
+                    {DASHBOARD_MESSAGES.AI_PROVIDER_LABEL}
+                  </span>
+                  <select
+                    value={aiProvider}
+                    onChange={(e) =>
+                      onAiProviderChange(
+                        e.target.value === CHAT_AI_PROVIDER.OLLAMA ?
+                          CHAT_AI_PROVIDER.OLLAMA
+                        : CHAT_AI_PROVIDER.OPENAI,
+                      )
+                    }
+                    disabled={busy}
+                    className="h-7 w-[9.625rem] max-w-full shrink-0 rounded-md border border-[var(--dash-border)] bg-[var(--background)] px-1.5 py-0 text-[11px] font-semibold leading-none text-[var(--foreground)] disabled:opacity-50"
+                  >
+                    <option value={CHAT_AI_PROVIDER.OPENAI}>
+                      {DASHBOARD_MESSAGES.AI_PROVIDER_OPENAI}
+                    </option>
+                    <option value={CHAT_AI_PROVIDER.OLLAMA}>
+                      {DASHBOARD_MESSAGES.AI_PROVIDER_OLLAMA}
+                    </option>
+                  </select>
+                </label>
 
-              <div className="flex justify-end gap-1">
-                <button
-                  type="button"
-                  onClick={decreaseScale}
-                  disabled={scale <= MIN_SCALE}
-                  className="rounded-lg border border-[var(--dash-border)] px-2 py-1 text-xs font-semibold text-[var(--foreground)] disabled:opacity-45"
-                >
-                  A-
-                </button>
-                <button
-                  type="button"
-                  onClick={increaseScale}
-                  disabled={scale >= MAX_SCALE}
-                  className="rounded-lg border border-[var(--dash-border)] px-2 py-1 text-xs font-semibold text-[var(--foreground)] disabled:opacity-45"
-                >
-                  A+
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsOpen(false)}
-                  className="rounded-lg border border-[var(--dash-border)] px-2 py-1 text-xs font-semibold text-[var(--foreground)]"
-                  aria-label="Close assistant popup"
-                >
-                  -
-                </button>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    onClick={decreaseScale}
+                    disabled={scale <= MIN_SCALE}
+                    className="rounded-lg border border-[var(--dash-border)] px-2 py-1 text-xs font-semibold text-[var(--foreground)] disabled:opacity-45"
+                  >
+                    A-
+                  </button>
+                  <button
+                    type="button"
+                    onClick={increaseScale}
+                    disabled={scale >= MAX_SCALE}
+                    className="rounded-lg border border-[var(--dash-border)] px-2 py-1 text-xs font-semibold text-[var(--foreground)] disabled:opacity-45"
+                  >
+                    A+
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsOpen(false)}
+                    className="rounded-lg border border-[var(--dash-border)] px-2 py-1 text-xs font-semibold text-[var(--foreground)]"
+                    aria-label="Close assistant popup"
+                  >
+                    -
+                  </button>
+                </div>
               </div>
             </div>
           </header>
