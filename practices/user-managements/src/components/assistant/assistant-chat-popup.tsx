@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 
 // Constants
+import type { ChatAiProviderId } from "@/constants/ai-provider";
+import { CHAT_AI_PROVIDER } from "@/constants/ai-provider";
 import { DASHBOARD_MESSAGES } from "@/constants/messages";
 
 // Libraries
@@ -25,6 +27,8 @@ type AssistantChatPopupProps = {
   chatHint: string;
   busy: boolean;
   errorMessage?: string;
+  aiProvider: ChatAiProviderId;
+  onAiProviderChange: (provider: ChatAiProviderId) => void;
   input: string;
   setInput: (value: string) => void;
   onSubmit: (event: React.FormEvent) => void | Promise<void>;
@@ -43,6 +47,8 @@ export const AssistantChatPopup = ({
   chatHint,
   busy,
   errorMessage,
+  aiProvider,
+  onAiProviderChange,
   input,
   setInput,
   onSubmit,
@@ -92,9 +98,9 @@ export const AssistantChatPopup = ({
           className="pointer-events-auto flex min-h-[480px] flex-col overflow-hidden rounded-2xl border border-[var(--dash-border)] bg-[var(--dash-card)] shadow-2xl shadow-black/10"
         >
           <header className="border-b border-[var(--dash-border)] p-4">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--dash-accent-soft)]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--dash-accent-soft)]">
                   <svg
                     className="h-5 w-5 text-[var(--dash-accent)]"
                     fill="none"
@@ -109,12 +115,37 @@ export const AssistantChatPopup = ({
                     />
                   </svg>
                 </div>
-                <h2 className="text-sm font-semibold tracking-tight sm:text-base">
+                <h2 className="min-w-0 text-sm font-semibold tracking-tight sm:text-base">
                   {title}
                 </h2>
               </div>
 
-              <div className="flex items-center gap-1">
+              <label className="flex w-full min-w-0 flex-col gap-1.5 text-xs text-[var(--dash-muted)] sm:flex-row sm:items-center sm:gap-2">
+                <span className="shrink-0 whitespace-nowrap">
+                  {DASHBOARD_MESSAGES.AI_PROVIDER_LABEL}
+                </span>
+                <select
+                  value={aiProvider}
+                  onChange={(e) =>
+                    onAiProviderChange(
+                      e.target.value === CHAT_AI_PROVIDER.OLLAMA ?
+                        CHAT_AI_PROVIDER.OLLAMA
+                      : CHAT_AI_PROVIDER.OPENAI,
+                    )
+                  }
+                  disabled={busy}
+                  className="min-w-0 flex-1 rounded-lg border border-[var(--dash-border)] bg-[var(--background)] px-2 py-1.5 text-xs font-semibold text-[var(--foreground)] disabled:opacity-50"
+                >
+                  <option value={CHAT_AI_PROVIDER.OPENAI}>
+                    {DASHBOARD_MESSAGES.AI_PROVIDER_OPENAI}
+                  </option>
+                  <option value={CHAT_AI_PROVIDER.OLLAMA}>
+                    {DASHBOARD_MESSAGES.AI_PROVIDER_OLLAMA}
+                  </option>
+                </select>
+              </label>
+
+              <div className="flex justify-end gap-1">
                 <button
                   type="button"
                   onClick={decreaseScale}

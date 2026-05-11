@@ -1,1 +1,5 @@
 OPENAI_API_KEY=
+
+# Optional — assistant “Ollama (local)” provider (see https://ai-sdk.dev/providers/community-providers/ollama)
+OLLAMA_BASE_URL=http://127.0.0.1:11434/api
+OLLAMA_MODEL=llama3.2

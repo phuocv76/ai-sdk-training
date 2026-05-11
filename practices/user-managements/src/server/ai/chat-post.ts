@@ -1,14 +1,20 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { createOllama } from 'ollama-ai-provider-v2';
 import {
   createAgentUIStreamResponse,
   streamText,
   TypeValidationError,
+  type LanguageModel,
   type UIMessage,
 } from 'ai';
 
+import { CHAT_AI_PROVIDER, type ChatAiProviderId } from '@/constants/ai-provider';
 import { API_MESSAGES, REQUEST_HEADERS } from '@/constants/messages';
-import { wrapUserManagementChatModel } from '@/server/ai/chat-language-model';
+import {
+  wrapUserManagementChatModel,
+  wrapUserManagementOllamaChatModel,
+} from '@/server/ai/chat-language-model';
 import { requireDatabase, resolveSessionUser } from '@/server/auth/cookies';
 import { createUserManagementAgent } from '@/server/ai/user-management-agent';
 import { USER_MANAGEMENT_TOPICS } from '@/constants/promts';
@@ -65,6 +71,17 @@ const chatJsonError = (message: string, status: number) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
+const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434/api';
+const DEFAULT_OLLAMA_MODEL = 'llama3.2';
+
+const parseChatProvider = (raw: unknown): ChatAiProviderId => {
+  if (typeof raw !== 'string') return CHAT_AI_PROVIDER.OPENAI;
+  const v = raw.trim().toLowerCase();
+  return v === CHAT_AI_PROVIDER.OLLAMA ?
+      CHAT_AI_PROVIDER.OLLAMA
+    : CHAT_AI_PROVIDER.OPENAI;
+};
+
 /** Basic guard to keep chat constrained to user-management intents. */
 const isUserManagementRelated = (input: string): boolean => {
   const normalized = input.toLowerCase();
@@ -77,10 +94,11 @@ const isUserManagementRelated = (input: string): boolean => {
 
 /**
  * Streams an AI assistant backed by authenticated tool calls (profile + admin CRUD).
- * @param req Incoming chat UI messages and optional `x-openai-api-key` override.
+ * @param req Incoming chat UI messages, optional JSON `provider` (`openai` | `ollama`),
+ *   and optional `x-openai-api-key` override when using OpenAI.
  */
 export const handleChatPost = async (req: Request): Promise<Response> => {
-  let body: { messages: UIMessage[] };
+  let body: { messages: UIMessage[]; provider?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -109,22 +127,37 @@ export const handleChatPost = async (req: Request): Promise<Response> => {
   }
   const { env } = await getCloudflareContext({ async: true });
   const db = dbCtx.db;
+  const provider = parseChatProvider(body.provider);
+
   const headerKey = req.headers
     .get(REQUEST_HEADERS.OPENAI_API_KEY_OVERRIDE)
     ?.trim();
   const envKey = env.OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
   const apiKey = headerKey || envKey;
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({
-        error: API_MESSAGES.MISSING_OPENAI_API_KEY,
-      }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } },
-    );
-  }
 
-  const openai = createOpenAI({ apiKey });
-  const languageModel = wrapUserManagementChatModel(openai);
+  let languageModel: LanguageModel;
+
+  if (provider === CHAT_AI_PROVIDER.OPENAI) {
+    if (!apiKey) {
+      return new Response(
+        JSON.stringify({
+          error: API_MESSAGES.MISSING_OPENAI_API_KEY,
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    const openai = createOpenAI({ apiKey });
+    languageModel = wrapUserManagementChatModel(openai);
+  } else {
+    const ollamaBaseUrl =
+      env.OLLAMA_BASE_URL ??
+      process.env.OLLAMA_BASE_URL ??
+      DEFAULT_OLLAMA_BASE_URL;
+    const ollamaModel =
+      env.OLLAMA_MODEL ?? process.env.OLLAMA_MODEL ?? DEFAULT_OLLAMA_MODEL;
+    const ollama = createOllama({ baseURL: ollamaBaseUrl });
+    languageModel = wrapUserManagementOllamaChatModel(ollama, ollamaModel);
+  }
   const latestText = latestUserText(body.messages);
 
   try {

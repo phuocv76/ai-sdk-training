@@ -15,6 +15,11 @@ import { useOpenAiApiKey } from "@/components/providers/openai-api-key-context";
 
 // Constants
 import {
+  CHAT_AI_PROVIDER,
+  CHAT_AI_PROVIDER_STORAGE_KEY,
+  type ChatAiProviderId,
+} from "@/constants/ai-provider";
+import {
   ACCOUNT_MESSAGES,
   DASHBOARD_MESSAGES,
   REQUEST_HEADERS,
@@ -65,6 +70,19 @@ export const UserDashboard = () => {
   const isAdmin = currentUser?.role === "admin";
   const { apiKey: openAiApiKey } = useOpenAiApiKey();
 
+  const [aiProvider, setAiProvider] = useState<ChatAiProviderId>(() => {
+    if (typeof window === "undefined") return CHAT_AI_PROVIDER.OPENAI;
+    const stored = window.localStorage.getItem(CHAT_AI_PROVIDER_STORAGE_KEY);
+    return stored === CHAT_AI_PROVIDER.OLLAMA ?
+        CHAT_AI_PROVIDER.OLLAMA
+      : CHAT_AI_PROVIDER.OPENAI;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(CHAT_AI_PROVIDER_STORAGE_KEY, aiProvider);
+  }, [aiProvider]);
+
   const chatTransport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -76,8 +94,24 @@ export const UserDashboard = () => {
           if (k) headers[REQUEST_HEADERS.OPENAI_API_KEY_OVERRIDE] = k;
           return headers;
         },
+        prepareSendMessagesRequest: ({
+          id,
+          messages,
+          body,
+          trigger,
+          messageId,
+        }) => ({
+          body: {
+            ...body,
+            id,
+            messages,
+            trigger,
+            messageId,
+            provider: aiProvider,
+          },
+        }),
       }),
-    [openAiApiKey],
+    [openAiApiKey, aiProvider],
   );
 
   const [users, setUsers] = useState<User[]>([]);
@@ -489,6 +523,8 @@ export const UserDashboard = () => {
         chatHint={chatHint}
         busy={busy}
         errorMessage={error?.message}
+        aiProvider={aiProvider}
+        onAiProviderChange={setAiProvider}
         input={input}
         setInput={setInput}
         onSubmit={onSubmit}

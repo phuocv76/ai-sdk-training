@@ -129,6 +129,13 @@ export const openApiSpec = {
             type: "array",
             items: { type: "object", additionalProperties: true },
           },
+          provider: {
+            type: "string",
+            enum: ["openai", "ollama"],
+            description:
+              "Chat backend. `openai` requires `OPENAI_API_KEY` (or `x-openai-api-key`). " +
+              "`ollama` uses local Ollama (`OLLAMA_BASE_URL`, `OLLAMA_MODEL`). Defaults to `openai`.",
+          },
         },
         required: ["messages"],
       },
@@ -422,7 +429,8 @@ export const openApiSpec = {
         tags: ["chat"],
         summary: "Streaming assistant chat",
         description:
-          "Requires `OPENAI_API_KEY` (or optional header `x-openai-api-key`). " +
+          "Default provider `openai` requires `OPENAI_API_KEY` (or optional header `x-openai-api-key`). " +
+          "With `provider: ollama`, the server calls local Ollama (`OLLAMA_BASE_URL`, `OLLAMA_MODEL`). " +
           "Returns a UI message stream (`text/event-stream` style per AI SDK), not plain JSON.",
         security: [{ sessionCookie: [] }],
         parameters: [
