@@ -14,6 +14,7 @@ import { userLatestTextIdentifiesDirectoryRecord } from '@/lib/directory/display
 import { userResponseBody, type User } from '@/lib/domain/user';
 import {
   createUserToolInputSchema,
+  deleteUserToolInputSchema,
   emptyObjectSchema,
   findUserByEmailPayloadSchema,
   updateMyProfileToolInputSchema,
@@ -46,20 +47,35 @@ type WorkflowResult<T> =
       preview: unknown;
     };
 
-/** Detects whether the latest user message explicitly approves an action. */
-const isHumanConfirmation = (text: string): boolean => {
-  const normalized = text.trim().toLowerCase();
-  const alphaOnly = normalized.replace(/[^a-z]/g, '');
-  if (!normalized) return false;
-  const looksLikeApprove = /^a+p+r+o+v+e+$/.test(alphaOnly);
-  return (
-    normalized.includes('confirm') ||
-    normalized.includes('approve') ||
-    looksLikeApprove ||
-    normalized.includes('yes, proceed') ||
-    normalized === 'yes' ||
-    normalized === 'ok'
+/** Strip model-only mutation flag from preview payloads shown to the client. */
+const stripHumanAffirmsFromToolInput = (input: unknown): unknown => {
+  if (typeof input !== 'object' || input === null) return input;
+  const { humanAffirmsExecute: _, ...rest } = input as Record<string, unknown>;
+  return rest;
+};
+
+const readHumanAffirmsExecute = (input: unknown): boolean =>
+  typeof input === 'object' &&
+  input !== null &&
+  (input as { humanAffirmsExecute?: boolean }).humanAffirmsExecute === true;
+
+/**
+ * If the latest user text clearly refuses, do not run execute even when the model
+ * set humanAffirmsExecute (defense in depth).
+ */
+const looksLikeUserRefusal = (text: string): boolean => {
+  const n = text.trim().toLowerCase();
+  if (!n) return false;
+  return /\b(?:no|nope|nah|never|don't|dont|stop|cancel|abort|reject|refused|disagree|wrong|hold on|wait)\b/.test(
+    n,
   );
+};
+
+const shouldExecuteMutation = (latestText: string, input: unknown): boolean => {
+  if (!readHumanAffirmsExecute(input)) return false;
+  if (!latestText.trim()) return false;
+  if (looksLikeUserRefusal(latestText)) return false;
+  return true;
 };
 
 /**
@@ -79,8 +95,15 @@ const rejectDuplicateDirectoryNameUnlessDisambiguated = async (
   db: D1Database,
   latestText: string,
   target: User,
+  affirmsExecute: boolean,
 ): Promise<DuplicateDirectoryNameGate> => {
-  if (isHumanConfirmation(latestText)) return { kind: 'proceed' };
+  if (
+    affirmsExecute &&
+    latestText.trim() &&
+    !looksLikeUserRefusal(latestText)
+  ) {
+    return { kind: 'proceed' };
+  }
 
   const shared = await listUsersSharingDisplayNameKey(db, target.name);
   if (shared.length <= 1) return { kind: 'proceed' };
@@ -97,7 +120,7 @@ const rejectDuplicateDirectoryNameUnlessDisambiguated = async (
   };
 };
 
-/** Human-in-loop confirmation preview until the latest user message approves execution. */
+/** Human-in-loop: execute only when the model sets humanAffirmsExecute and text is not a refusal. */
 const createHumanInLoopWorkflow: (
   latestText: string,
   action: string,
@@ -106,14 +129,14 @@ const createHumanInLoopWorkflow: (
   run: () => Promise<T>,
 ) => Promise<WorkflowResult<T>> = (latestText, action) => {
   return async <T>(input: unknown, run: () => Promise<T>) => {
-    if (!isHumanConfirmation(latestText)) {
+    if (!shouldExecuteMutation(latestText, input)) {
       return {
         ok: false,
         requiresConfirmation: true,
         action,
         message: CHAT_HUMAN_CONFIRM_MESSAGES.AWAITING,
         hint: CHAT_HUMAN_CONFIRM_MESSAGES.HOW_TO_REPLY,
-        preview: input,
+        preview: stripHumanAffirmsFromToolInput(input),
       };
     }
     try {
@@ -226,7 +249,11 @@ export const createUserManagementAgentTools = ({
       inputSchema: createUserToolInputSchema,
       execute: async (input) => {
         const workflow = createHumanInLoopWorkflow(latestText, 'createUser');
-        const result = await workflow(input, async () => createUser(db, input));
+        const result = await workflow(input, async () => {
+          const { humanAffirmsExecute, ...payload } = input;
+          void humanAffirmsExecute;
+          return createUser(db, payload);
+        });
         if (!result.ok) {
           if ('requiresConfirmation' in result) return result;
           return { ok: false as const, error: result.error };
@@ -245,6 +272,7 @@ export const createUserManagementAgentTools = ({
           db,
           latestText,
           target,
+          readHumanAffirmsExecute(input),
         );
         if (dup.kind === 'ambiguous') {
           return {
@@ -257,7 +285,8 @@ export const createUserManagementAgentTools = ({
 
         const workflow = createHumanInLoopWorkflow(latestText, 'updateUser');
         const result = await workflow(input, async () => {
-          const { id, ...fields } = input;
+          const { humanAffirmsExecute, id, ...fields } = input;
+          void humanAffirmsExecute;
           if (fields.status === 'inactive' && id === me.id) {
             throw new Error(API_MESSAGES.CANNOT_DEACTIVATE_SELF_ACCOUNT);
           }
@@ -287,7 +316,7 @@ export const createUserManagementAgentTools = ({
     }),
     deleteUser: tool({
       description: CHAT_TOOL_MESSAGES.DELETE_USER,
-      inputSchema: userIdPayloadSchema,
+      inputSchema: deleteUserToolInputSchema,
       execute: async (input) => {
         const target = await getUser(db, input.id);
         if (!target) return { ok: false as const, error: API_MESSAGES.USER_NOT_FOUND };
@@ -296,6 +325,7 @@ export const createUserManagementAgentTools = ({
           db,
           latestText,
           target,
+          readHumanAffirmsExecute(input),
         );
         if (dup.kind === 'ambiguous') {
           return {
@@ -308,8 +338,10 @@ export const createUserManagementAgentTools = ({
 
         const workflow = createHumanInLoopWorkflow(latestText, 'deleteUser');
         const result = await workflow(input, async () => {
-          const { deleted } = await deleteUser(db, input.id);
-          return { ok: deleted, id: input.id };
+          const { humanAffirmsExecute, id } = input;
+          void humanAffirmsExecute;
+          const { deleted } = await deleteUser(db, id);
+          return { ok: deleted, id };
         });
         if (!result.ok) {
           if ('requiresConfirmation' in result) return result;

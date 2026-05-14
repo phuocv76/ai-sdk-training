@@ -27,6 +27,19 @@ const LOOKS_LIKE_DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** Accept explicit confirmation-only follow-ups as valid chat intents. */
 const LOOKS_LIKE_CONFIRMATION = /(?:^|\b)(confirm|approve|yes|ok)(?:\b|$)/i;
 
+/**
+ * Meta-questions about which user/profile attributes can be changed often omit
+ * words like "profile" or "update" (e.g. "Which fields are editable?").
+ */
+const LOOKS_LIKE_FIELD_OR_SCHEMA_QUESTION = (s: string): boolean =>
+  /\b(?:which|what)\s+(?:fields?|columns?|properties?|attributes?)\b/.test(s) ||
+  /\bfields?\s+(?:can|could|may|are)\b/.test(s) ||
+  /\b(?:which|what)\s+(?:can|could|may)\s+(?:i|you|we)\s+(?:update|change|edit|modify)\b/.test(
+    s,
+  ) ||
+  /\b(?:editable|read[-\s]?only|immutable|updatable|modifiable)\b/.test(s) ||
+  /\bwhat\s+(?:can|could)\s+be\s+(?:updated|changed|edited|modified)\b/.test(s);
+
 /** Returns the most recent non-empty user text from UI messages. */
 const latestUserText = (messages: UIMessage[] | undefined): string => {
   if (!messages?.length) return '';
@@ -90,6 +103,7 @@ const isUserManagementRelated = (input: string): boolean => {
   if (LOOKS_LIKE_EMAIL.test(input)) return true;
   if (LOOKS_LIKE_DATE.test(normalized.trim())) return true;
   if (LOOKS_LIKE_CONFIRMATION.test(normalized)) return true;
+  if (LOOKS_LIKE_FIELD_OR_SCHEMA_QUESTION(normalized)) return true;
   return USER_MANAGEMENT_TOPICS.some((topic) => normalized.includes(topic));
 };
 

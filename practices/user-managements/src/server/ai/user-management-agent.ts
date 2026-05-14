@@ -3,8 +3,8 @@ import { ToolLoopAgent, stepCountIs, type LanguageModel } from 'ai';
 
 // Constants
 import {
+  buildMemberChatSystemPrompt,
   CHAT_SYSTEM_PROMPTS,
-  chatMemberSystemPrompt,
 } from '@/constants/promts';
 
 // Domain
@@ -38,7 +38,7 @@ export const createUserManagementAgent = ({
   const instructions =
     me.role === 'admin'
       ? CHAT_SYSTEM_PROMPTS.ADMIN
-      : chatMemberSystemPrompt(me.name);
+      : buildMemberChatSystemPrompt(me.name);
 
   return new ToolLoopAgent({
     model,

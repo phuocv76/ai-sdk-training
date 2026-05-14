@@ -236,7 +236,7 @@ export const CHAT_HUMAN_CONFIRM_MESSAGES = {
   AWAITING:
     "Nothing has been applied yet. Confirm when you want to go ahead with this change.",
   HOW_TO_REPLY:
-    "Send approve, yes, ok, or any message that includes the word confirm.",
+    "Reply in natural language that you approve this preview (typos and informal wording are fine). On the next tool call, set humanAffirmsExecute to true with the same payload only when the latest user message clearly affirms it.",
   /** Directory tool confirmation previews (structured `preview` from the server). */
   PREVIEW_USER_ID_LABEL: "User ID",
   /** Server rejects update/delete preview when ≥2 rows share this display name and the message doesn't identify one row by email/id/DOB. */
@@ -258,7 +258,7 @@ export const CHAT_TOOL_MESSAGES = {
   GET_MY_PROFILE:
     "Load the signed-in user's full profile record (name, DOB YYYY-MM-DD, bio). Email is shown for reference only; do not submit email changes.",
   UPDATE_MY_PROFILE:
-    "Update ONLY the signed-in user's profile fields (name, bio, date of birth). Omit unchanged fields. Empty string clears a field where supported. Date of birth as YYYY-MM-DD. Do not include email—it cannot be updated via this tool. First call returns a preview; the human must reply with \"confirm updateMyProfile\" or approve; call again with the same arguments to apply.",
+    "Update ONLY the signed-in user's profile fields (name, bio, date of birth). Omit unchanged fields. Empty string clears a field where supported. Date of birth as YYYY-MM-DD. Do not include email—it cannot be updated via this tool. Two-step: first call with humanAffirmsExecute false or omitted returns a preview; after the user clearly affirms (you judge their wording, including typos), call again with the same field values and humanAffirmsExecute true to apply.",
   LIST_USERS:
     "List every user, newest first (including profile columns). Use this to resolve duplicate display names before updateUser/deleteUser: compare names case-insensitively with trim. For a single email existence check, prefer findUserByEmail.",
   GET_USER: "Fetch one user by id (includes profile columns).",
@@ -266,11 +266,11 @@ export const CHAT_TOOL_MESSAGES = {
     "Look up one directory user by email (trimmed and compared case-insensitively, same as sign-in). Use this whenever the human asks whether an address exists, who has an email, or similar—then answer only from this tool’s result (or from listUsers if you already listed). Never claim an email is or is not in the directory without tool output.",
   USER_ID_PARAM: "User id (UUID)",
   CREATE_USER:
-    "Create a directory user with unique email (standard RFC-like syntax; multi-part domains such as example.com.vn or mail.co.uk are valid), full name, and date of birth (YYYY-MM-DD); bio is optional. Default password is Abcd@123.",
+    "Create a directory user with unique email (standard RFC-like syntax; multi-part domains such as example.com.vn or mail.co.uk are valid), full name, and date of birth (YYYY-MM-DD); bio is optional. Default password is Abcd@123. Two-step: first call with humanAffirmsExecute false or omitted previews; after the user clearly affirms, same payload with humanAffirmsExecute true creates the user.",
   UPDATE_USER:
-    "Update name, bio, date of birth, or status (active | inactive) for exactly one user id. Do not pick an id when several users share the same name unless the directory has already been narrowed to one match or the human specified email/uuid/uniquely identifying fields—otherwise list matching users (via listUsers) and wait for them to choose. Omit unchanged patch fields. Do not submit email—addresses are fixed after account creation. Setting status to inactive signs the user out everywhere. First call returns a preview; the human must reply with \"confirm updateUser\" or approve; call again with the same arguments to apply.",
+    "Update name, bio, date of birth, or status (active | inactive) for exactly one user id. Do not pick an id when several users share the same name unless the directory has already been narrowed to one match or the human specified email/uuid/uniquely identifying fields—otherwise list matching users (via listUsers) and wait for them to choose. Omit unchanged patch fields. Do not submit email—addresses are fixed after account creation. Setting status to inactive signs the user out everywhere. Two-step: first call with humanAffirmsExecute false or omitted previews; after clear user affirmation, same args with humanAffirmsExecute true applies.",
   DELETE_USER:
-    "Delete one user by id. Same ambiguity rule as updateUser: if multiple users share the asked-for name without a distinguishing email or id given, list matches from listUsers and wait for explicit choice before deleteUser.",
+    "Delete one user by id. Same ambiguity rule as updateUser: if multiple users share the asked-for name without a distinguishing email or id given, list matches from listUsers and wait for explicit choice before deleteUser. Two-step: first call with humanAffirmsExecute false or omitted previews deletion; after clear user affirmation, same id with humanAffirmsExecute true deletes.",
 } as const;
 
 /** Canonical HTTP header names shared by the chat API and client transport. */
