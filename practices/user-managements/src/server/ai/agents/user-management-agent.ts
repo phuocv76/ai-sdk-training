@@ -11,7 +11,7 @@ import {
 import { type User } from '@/lib/domain/user';
 
 // Server
-import { createUserManagementAgentTools } from '@/server/ai/user-management-agent-tools';
+import { createUserManagementAgentTools } from '@/server/ai/tools/user-management-agent-tools';
 
 /**
  * Builds the user-management ToolLoopAgent with role-specific instructions/tools.

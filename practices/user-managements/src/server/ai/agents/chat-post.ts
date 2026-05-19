@@ -14,14 +14,14 @@ import { API_MESSAGES, REQUEST_HEADERS } from '@/constants/messages';
 import {
   wrapUserManagementChatModel,
   wrapUserManagementOllamaChatModel,
-} from '@/server/ai/chat-language-model';
+} from '@/server/ai/agents/chat-language-model';
 import { requireDatabase, resolveSessionUser } from '@/server/auth/cookies';
-import { sanitizeChatUiMessagesForValidation } from '@/server/ai/sanitize-chat-ui-messages';
+import { sanitizeChatUiMessagesForValidation } from '@/server/ai/agents/sanitize-chat-ui-messages';
 import {
   registerOpenAiApiKey,
   resolveOpenAiApiKeyFromToken,
-} from '@/server/ai/openai-api-key-tokens';
-import { createUserManagementAgent } from '@/server/ai/user-management-agent';
+} from '@/server/ai/agents/openai-api-key-tokens';
+import { createUserManagementAgent } from '@/server/ai/agents/user-management-agent';
 import { USER_MANAGEMENT_TOPICS } from '@/constants/promts';
 
 /** Loose pattern so pasted emails (e.g. add-member requests) count as on-topic. */

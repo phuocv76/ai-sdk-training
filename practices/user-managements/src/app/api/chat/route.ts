@@ -1,4 +1,4 @@
-import { handleChatPost } from "@/server/ai/chat-post";
+import { handleChatPost } from "@/server/ai/agents/chat-post";
 
 export const dynamic = "force-dynamic";
 
