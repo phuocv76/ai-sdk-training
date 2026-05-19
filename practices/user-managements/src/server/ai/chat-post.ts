@@ -17,6 +17,10 @@ import {
 } from '@/server/ai/chat-language-model';
 import { requireDatabase, resolveSessionUser } from '@/server/auth/cookies';
 import { sanitizeChatUiMessagesForValidation } from '@/server/ai/sanitize-chat-ui-messages';
+import {
+  registerOpenAiApiKey,
+  resolveOpenAiApiKeyFromToken,
+} from '@/server/ai/openai-api-key-tokens';
 import { createUserManagementAgent } from '@/server/ai/user-management-agent';
 import { USER_MANAGEMENT_TOPICS } from '@/constants/promts';
 
@@ -107,10 +111,25 @@ const isUserManagementRelated = (input: string): boolean => {
   return USER_MANAGEMENT_TOPICS.some((topic) => normalized.includes(topic));
 };
 
+/** Attaches a newly issued OpenAI key token to a streaming or JSON chat response. */
+const withIssuedOpenAiKeyToken = (
+  response: Response,
+  token: string | null,
+): Response => {
+  if (!token) return response;
+  const headers = new Headers(response.headers);
+  headers.set(REQUEST_HEADERS.OPENAI_API_KEY_TOKEN, token);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+};
+
 /**
  * Streams an AI assistant backed by authenticated tool calls (profile + admin CRUD).
  * @param req Incoming chat UI messages, optional JSON `provider` (`openai` | `ollama`),
- *   and optional `x-openai-api-key` override when using OpenAI.
+ *   optional `x-openai-api-key` on first use, and `x-openai-api-key-token` thereafter.
  */
 export const handleChatPost = async (req: Request): Promise<Response> => {
   let body: { messages: UIMessage[]; provider?: unknown };
@@ -147,8 +166,25 @@ export const handleChatPost = async (req: Request): Promise<Response> => {
   const headerKey = req.headers
     .get(REQUEST_HEADERS.OPENAI_API_KEY_OVERRIDE)
     ?.trim();
+  const headerToken = req.headers
+    .get(REQUEST_HEADERS.OPENAI_API_KEY_TOKEN)
+    ?.trim();
   const envKey = env.OPENAI_API_KEY ?? process.env.OPENAI_API_KEY;
-  const apiKey = headerKey || envKey;
+
+  let apiKey = envKey;
+  let issuedOpenAiKeyToken: string | null = null;
+
+  if (headerKey) {
+    apiKey = headerKey;
+    issuedOpenAiKeyToken = await registerOpenAiApiKey(db, me.id, headerKey);
+  } else if (headerToken) {
+    const fromToken = await resolveOpenAiApiKeyFromToken(
+      db,
+      me.id,
+      headerToken,
+    );
+    if (fromToken) apiKey = fromToken;
+  }
 
   let languageModel: LanguageModel;
 
@@ -189,9 +225,12 @@ export const handleChatPost = async (req: Request): Promise<Response> => {
         ],
         abortSignal: req.signal,
       });
-      return offTopicResult.toUIMessageStreamResponse({
-        onError: handleChatAiStreamError,
-      });
+      return withIssuedOpenAiKeyToken(
+        offTopicResult.toUIMessageStreamResponse({
+          onError: handleChatAiStreamError,
+        }),
+        issuedOpenAiKeyToken,
+      );
     }
 
     const agent = createUserManagementAgent({
@@ -203,12 +242,15 @@ export const handleChatPost = async (req: Request): Promise<Response> => {
 
     const uiMessages = sanitizeChatUiMessagesForValidation(body.messages);
 
-    return await createAgentUIStreamResponse({
-      agent,
-      uiMessages,
-      abortSignal: req.signal,
-      onError: handleChatAiStreamError,
-    });
+    return withIssuedOpenAiKeyToken(
+      await createAgentUIStreamResponse({
+        agent,
+        uiMessages,
+        abortSignal: req.signal,
+        onError: handleChatAiStreamError,
+      }),
+      issuedOpenAiKeyToken,
+    );
   } catch (error) {
     console.error('[chat] failed:', error);
     if (error instanceof TypeValidationError) {

@@ -44,7 +44,8 @@ export const OpenAiApiKeyProvider = ({
 };
 
 /**
- * Accesses the masked API key mirrored into `x-openai-api-key` on chat transport.
+ * Accesses the masked API key sent once as `x-openai-api-key`; chat then uses
+ * the server-issued `x-openai-api-key-token` on later requests.
  */
 export const useOpenAiApiKey = () => {
   const ctx = useContext(OpenAiApiKeyContext);
@@ -57,7 +58,7 @@ export const useOpenAiApiKey = () => {
 };
 
 /**
- * Sidebar control: masked OpenAI key sent with chat requests when non-empty.
+ * Sidebar control: masked OpenAI key registered on the first chat request when set.
  */
 export const OpenAiApiKeyField = () => {
   const { apiKey, setApiKey } = useOpenAiApiKey();

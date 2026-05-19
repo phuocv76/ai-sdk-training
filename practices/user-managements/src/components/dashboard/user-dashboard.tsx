@@ -1,7 +1,6 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from "react";
 
 // Components
@@ -22,9 +21,11 @@ import {
 import {
   ACCOUNT_MESSAGES,
   DASHBOARD_MESSAGES,
-  REQUEST_HEADERS,
   UI_SYMBOLS,
 } from "@/constants/messages";
+
+// Hooks
+import { useAssistantChatTransport } from "@/hooks/use-assistant-chat-transport";
 
 // Libraries
 import { displayName, type User } from "@/lib/domain/user";
@@ -83,36 +84,7 @@ export const UserDashboard = () => {
     window.localStorage.setItem(CHAT_AI_PROVIDER_STORAGE_KEY, aiProvider);
   }, [aiProvider]);
 
-  const chatTransport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        fetch: (input, init) =>
-          fetch(input, { ...init, credentials: "include" }),
-        headers: () => {
-          const k = openAiApiKey.trim();
-          const headers: Record<string, string> = {};
-          if (k) headers[REQUEST_HEADERS.OPENAI_API_KEY_OVERRIDE] = k;
-          return headers;
-        },
-        prepareSendMessagesRequest: ({
-          id,
-          messages,
-          body,
-          trigger,
-          messageId,
-        }) => ({
-          body: {
-            ...body,
-            id,
-            messages,
-            trigger,
-            messageId,
-            provider: aiProvider,
-          },
-        }),
-      }),
-    [openAiApiKey, aiProvider],
-  );
+  const chatTransport = useAssistantChatTransport(openAiApiKey, aiProvider);
 
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(

@@ -3,29 +3,25 @@
 import { getToolName, isTextUIPart, isToolUIPart } from 'ai';
 
 import {
-  assistantMessageShouldHideProseForDirectoryResultCard,
   CreateUserToolDisplay,
-  directoryToolAwaitingSdkOutput,
-  directoryToolSurfaceIsDeferred,
   DuplicateDisplayNameBlockedDisplay,
   GetMyProfileToolDisplay,
   UpdateMyProfileToolDisplay,
   UpdateUserToolDisplay,
-} from '@/components/create-user-tool-display';
+} from '@/components/assistant-tool-display';
 import { DASHBOARD_MESSAGES } from '@/constants/messages';
 
 // Libraries
-import { displayName, type User } from "@/lib/domain/user";
-import { renderInlineMarkdownBold } from "@/lib/markdown/render-inline-markdown-bold";
+import { displayName, type User } from '@/lib/domain/user';
+import { renderInlineMarkdownBold } from '@/lib/markdown/render-inline-markdown-bold';
 
-type ChatMessage = {
-  id: string;
-  role: 'user' | 'assistant' | string;
-  parts: unknown[];
-};
+import {
+  type AssistantChatMessage,
+  useAssistantChatMessageList,
+} from '@/hooks/use-assistant-chat-message-list';
 
 type AssistantChatMessageListProps = {
-  messages: ChatMessage[];
+  messages: AssistantChatMessage[];
   chatHint: string;
   currentUser: User | null;
   busy: boolean;
@@ -36,45 +32,20 @@ type UIPart = Parameters<typeof isTextUIPart>[0];
 const isUIPart = (part: unknown): part is UIPart =>
   typeof part === 'object' && part !== null && 'type' in part;
 
-const isAssistantRole = (role: string): boolean =>
-  role === 'assistant' || role === 'Assistant';
-
 /** Pulsing dots shown inside the active assistant bubble when there is no visible body yet. */
 const StreamingDots = () => (
-    <div className="flex items-center gap-1.5 pt-1" aria-hidden>
-      <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--dash-muted)]/70" />
-      <span
-        className="h-2 w-2 animate-pulse rounded-full bg-[var(--dash-muted)]/70"
-        style={{ animationDelay: '140ms' }}
-      />
-      <span
-        className="h-2 w-2 animate-pulse rounded-full bg-[var(--dash-muted)]/70"
-        style={{ animationDelay: '280ms' }}
-      />
-    </div>
+  <div className="flex items-center gap-1.5 pt-1" aria-hidden>
+    <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--dash-muted)]/70" />
+    <span
+      className="h-2 w-2 animate-pulse rounded-full bg-[var(--dash-muted)]/70"
+      style={{ animationDelay: '140ms' }}
+    />
+    <span
+      className="h-2 w-2 animate-pulse rounded-full bg-[var(--dash-muted)]/70"
+      style={{ animationDelay: '280ms' }}
+    />
+  </div>
 );
-
-/** True if the message already shows text (after prose-hiding rules) or any tool UI. */
-const assistantBubbleHasVisibleBody = (
-  parts: unknown[],
-  hideAssistantProse: boolean,
-  streamSettledForBubble: boolean,
-): boolean => {
-  for (const part of parts) {
-    if (!isUIPart(part)) continue;
-    if (isTextUIPart(part)) {
-      if (!hideAssistantProse && part.text.trim().length > 0) return true;
-      continue;
-    }
-    if (isToolUIPart(part)) {
-      if (directoryToolSurfaceIsDeferred(part, streamSettledForBubble)) {
-        continue;
-      }
-      return true;
-    }
-  }
-  return false;
-};
 
 export const AssistantChatMessageList = ({
   messages,
@@ -82,13 +53,8 @@ export const AssistantChatMessageList = ({
   currentUser,
   busy,
 }: AssistantChatMessageListProps) => {
-  const lastRole = messages.at(-1)?.role;
-  /**
-   * `useChat` adds an in-progress assistant row while streaming; that row already
-   * carries the ASSISTANT label. Skip the extra loading card in that case to avoid
-   * two “Assistant” headers at once.
-   */
-  const showDetachedAssistantBusy = busy && !isAssistantRole(lastRole ?? '');
+  const { showDetachedAssistantBusy, messageViewStates } =
+    useAssistantChatMessageList({ messages, busy });
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-[var(--background)]/50 p-5">
@@ -98,30 +64,11 @@ export const AssistantChatMessageList = ({
         </div>
       ) : null}
       {messages.map((m, msgIdx) => {
-        const isLast = msgIdx === messages.length - 1;
-        const streamSettledForBubble = !(
-          busy &&
-          isLast &&
-          isAssistantRole(m.role)
-        );
-        const hideAssistantTextForDirectoryCard =
-          m.role === 'assistant' &&
-          assistantMessageShouldHideProseForDirectoryResultCard(m.parts);
-
-        const awaitingDirectorySdkFinish =
-          isLast &&
-          isAssistantRole(m.role) &&
-          m.parts.some(directoryToolAwaitingSdkOutput);
-
-        const streamingThisAssistant =
-          isLast &&
-          isAssistantRole(m.role) &&
-          !assistantBubbleHasVisibleBody(
-            m.parts,
-            hideAssistantTextForDirectoryCard,
-            streamSettledForBubble,
-          ) &&
-          (busy || awaitingDirectorySdkFinish);
+        const {
+          streamSettledForBubble,
+          hideAssistantTextForDirectoryCard,
+          streamingThisAssistant,
+        } = messageViewStates[msgIdx];
 
         return (
           <div

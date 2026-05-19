@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
 // Constants
-import { DASHBOARD_MESSAGES } from "@/constants/messages";
+import { DASHBOARD_MESSAGES } from '@/constants/messages';
 
 type AssistantChatComposerProps = {
   isAdmin: boolean;

@@ -276,4 +276,5 @@ export const CHAT_TOOL_MESSAGES = {
 /** Canonical HTTP header names shared by the chat API and client transport. */
 export const REQUEST_HEADERS = {
   OPENAI_API_KEY_OVERRIDE: "x-openai-api-key",
+  OPENAI_API_KEY_TOKEN: "x-openai-api-key-token",
 } as const;
