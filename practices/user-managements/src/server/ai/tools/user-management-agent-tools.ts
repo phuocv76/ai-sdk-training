@@ -10,6 +10,8 @@ import {
 } from '@/constants/messages';
 
 // Domain
+import { buildUserUpdatePreview } from '@/lib/assistant/user-update-preview';
+import { sanitizeUserUpdateToolInput } from '@/lib/user/profile-patch';
 import { userLatestTextIdentifiesDirectoryRecord } from '@/lib/directory/display-name-match';
 import { userResponseBody, type User } from '@/lib/domain/user';
 import {
@@ -124,10 +126,11 @@ const rejectDuplicateDirectoryNameUnlessDisambiguated = async (
 const createHumanInLoopWorkflow: (
   latestText: string,
   action: string,
+  options?: { buildPreview?: (input: unknown) => unknown },
 ) => <T>(
   input: unknown,
   run: () => Promise<T>,
-) => Promise<WorkflowResult<T>> = (latestText, action) => {
+) => Promise<WorkflowResult<T>> = (latestText, action, options) => {
   return async <T>(input: unknown, run: () => Promise<T>) => {
     if (!shouldExecuteMutation(latestText, input)) {
       return {
@@ -136,7 +139,9 @@ const createHumanInLoopWorkflow: (
         action,
         message: CHAT_HUMAN_CONFIRM_MESSAGES.AWAITING,
         hint: CHAT_HUMAN_CONFIRM_MESSAGES.HOW_TO_REPLY,
-        preview: stripHumanAffirmsFromToolInput(input),
+        preview:
+          options?.buildPreview?.(input) ??
+          stripHumanAffirmsFromToolInput(input),
       };
     }
     try {
@@ -174,10 +179,19 @@ export const createUserManagementAgentTools = ({
       description: CHAT_TOOL_MESSAGES.UPDATE_MY_PROFILE,
       inputSchema: updateMyProfileToolInputSchema,
       execute: async (input) => {
+        const existing = await getUser(db, me.id);
+        if (!existing) {
+          return { ok: false as const, error: USER_DOMAIN_ERRORS.COULD_NOT_LOAD_PROFILE };
+        }
+
         const workflow = createHumanInLoopWorkflow(
           latestText,
           'updateMyProfile',
+          {
+            buildPreview: (raw) => buildUserUpdatePreview(existing, raw),
+          },
         );
+        const sanitized = sanitizeUserUpdateToolInput(input);
         const result = await workflow(input, async () => {
           const patch: {
             name?: string;
@@ -185,13 +199,12 @@ export const createUserManagementAgentTools = ({
             bio?: string | null;
           } = {};
           if (input.name !== undefined) patch.name = input.name;
-          if (input.date_of_birth !== undefined) {
-            patch.date_of_birth =
-              input.date_of_birth === '' || input.date_of_birth === null
-                ? null
-                : input.date_of_birth;
+          if ('date_of_birth' in sanitized) {
+            patch.date_of_birth = sanitized.date_of_birth as string | null;
           }
-          if (input.bio !== undefined) patch.bio = input.bio;
+          if ('bio' in sanitized) {
+            patch.bio = sanitized.bio as string | null;
+          }
           const user = await updateMemberProfile(db, me.id, patch);
           if (!user) throw new Error(USER_DOMAIN_ERRORS.COULD_NOT_LOAD_PROFILE);
           return userResponseBody(user);
@@ -283,7 +296,10 @@ export const createUserManagementAgentTools = ({
           };
         }
 
-        const workflow = createHumanInLoopWorkflow(latestText, 'updateUser');
+        const sanitizedFields = sanitizeUserUpdateToolInput(input);
+        const workflow = createHumanInLoopWorkflow(latestText, 'updateUser', {
+          buildPreview: (raw) => buildUserUpdatePreview(target, raw),
+        });
         const result = await workflow(input, async () => {
           const { humanAffirmsExecute, id, ...fields } = input;
           void humanAffirmsExecute;
@@ -293,15 +309,12 @@ export const createUserManagementAgentTools = ({
           const user = await updateUser(db, {
             id,
             name: fields.name,
-            bio: fields.bio,
             ...(fields.status !== undefined ? { status: fields.status } : {}),
-            ...(fields.date_of_birth !== undefined
-              ? {
-                  date_of_birth:
-                    fields.date_of_birth === '' || fields.date_of_birth === null
-                      ? null
-                      : fields.date_of_birth,
-                }
+            ...('date_of_birth' in sanitizedFields
+              ? { date_of_birth: sanitizedFields.date_of_birth as string | null }
+              : {}),
+            ...('bio' in sanitizedFields
+              ? { bio: sanitizedFields.bio as string | null }
               : {}),
           });
           if (!user) throw new Error(API_MESSAGES.USER_NOT_FOUND);

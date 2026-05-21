@@ -193,7 +193,7 @@ export const DASHBOARD_MESSAGES = {
   MEMBER_INVITED_SUCCESS_LINE:
     "Member has been successfully invited to the system",
   USER_UPDATED_CARD_BADGE: "User updated",
-  USER_UPDATED_SUCCESS_LINE: "Directory record updated — details below.",
+  USER_UPDATED_SUCCESS_LINE: "User has been updated successfully.",
   CREATE_USER_TOOL_PENDING: "Creating user…",
   UPDATE_USER_TOOL_PENDING: "Updating user…",
   UPDATE_MY_PROFILE_TOOL_PENDING: "Updating your profile…",
@@ -236,9 +236,12 @@ export const CHAT_HUMAN_CONFIRM_MESSAGES = {
   AWAITING:
     "Nothing has been applied yet. Confirm when you want to go ahead with this change.",
   HOW_TO_REPLY:
-    "Reply in natural language that you approve this preview (typos and informal wording are fine). On the next tool call, set humanAffirmsExecute to true with the same payload only when the latest user message clearly affirms it.",
+    "Are you sure you approve the changes?",
   /** Directory tool confirmation previews (structured `preview` from the server). */
   PREVIEW_USER_ID_LABEL: "User ID",
+  PREVIEW_CHANGE_OLD_LABEL: "Old",
+  PREVIEW_CHANGE_NEW_LABEL: "New",
+  PREVIEW_NO_FIELD_CHANGES: "No profile fields differ from the current record.",
   /** Server rejects update/delete preview when ≥2 rows share this display name and the message doesn't identify one row by email/id/DOB. */
   DUPLICATE_DISPLAY_NAME_BLOCKED:
     "More than one directory account uses this name. Below are all matching rows. Repeat your change using **email** or **user id** (or cite the same date of birth shown here) so the right record is targeted.",
@@ -258,7 +261,7 @@ export const CHAT_TOOL_MESSAGES = {
   GET_MY_PROFILE:
     "Load the signed-in user's full profile record (name, DOB YYYY-MM-DD, bio). Email is shown for reference only; do not submit email changes.",
   UPDATE_MY_PROFILE:
-    "Update ONLY the signed-in user's profile fields (name, bio, date of birth). Omit unchanged fields. Empty string clears a field where supported. Date of birth as YYYY-MM-DD. Do not include email—it cannot be updated via this tool. Two-step: first call with humanAffirmsExecute false or omitted returns a preview; after the user clearly affirms (you judge their wording, including typos), call again with the same field values and humanAffirmsExecute true to apply.",
+    "Update ONLY the signed-in user's profile fields (name, bio, date of birth). Omit unchanged fields entirely—never send date_of_birth or bio as null. Empty string clears a field only when the human explicitly asked to clear it. Date of birth as YYYY-MM-DD. Do not include email—it cannot be updated via this tool. Two-step: first call with humanAffirmsExecute false or omitted returns a preview; after the user clearly affirms (you judge their wording, including typos), call again with the same field values and humanAffirmsExecute true to apply.",
   LIST_USERS:
     "List every user, newest first (including profile columns). Use this to resolve duplicate display names before updateUser/deleteUser: compare names case-insensitively with trim. For a single email existence check, prefer findUserByEmail.",
   GET_USER: "Fetch one user by id (includes profile columns).",
@@ -268,7 +271,7 @@ export const CHAT_TOOL_MESSAGES = {
   CREATE_USER:
     "Create a directory user with unique email (standard RFC-like syntax; multi-part domains such as example.com.vn or mail.co.uk are valid), full name, and date of birth (YYYY-MM-DD); bio is optional. Default password is Abcd@123. Two-step: first call with humanAffirmsExecute false or omitted previews; after the user clearly affirms, same payload with humanAffirmsExecute true creates the user.",
   UPDATE_USER:
-    "Update name, bio, date of birth, or status (active | inactive) for exactly one user id. Do not pick an id when several users share the same name unless the directory has already been narrowed to one match or the human specified email/uuid/uniquely identifying fields—otherwise list matching users (via listUsers) and wait for them to choose. Omit unchanged patch fields. Do not submit email—addresses are fixed after account creation. Setting status to inactive signs the user out everywhere. Two-step: first call with humanAffirmsExecute false or omitted previews; after clear user affirmation, same args with humanAffirmsExecute true applies.",
+    "Update name, bio, date of birth, or status (active | inactive) for exactly one user id. Do not pick an id when several users share the same name unless the directory has already been narrowed to one match or the human specified email/uuid/uniquely identifying fields—otherwise list matching users (via listUsers) and wait for them to choose. Omit unchanged patch fields entirely—never send date_of_birth or bio as null (null is treated as omit; use empty string only when the human explicitly asked to clear that field). Do not submit email—addresses are fixed after account creation. Setting status to inactive signs the user out everywhere. Two-step: first call with humanAffirmsExecute false or omitted previews; after clear user affirmation, same args with humanAffirmsExecute true applies.",
   DELETE_USER:
     "Delete one user by id. Same ambiguity rule as updateUser: if multiple users share the asked-for name without a distinguishing email or id given, list matches from listUsers and wait for explicit choice before deleteUser. Two-step: first call with humanAffirmsExecute false or omitted previews deletion; after clear user affirmation, same id with humanAffirmsExecute true deletes.",
 } as const;

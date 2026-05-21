@@ -39,7 +39,7 @@ ${DOB_RULE}
 - **getUser** — by UUID when id is known.
 - **findUserByEmail** — preferred email lookup; or reuse recent listUsers. Emails are lowercase in DB—never guess from memory.
 - **createUser** — unique email, full name, DOB; bio optional. Two-step.
-- **updateUser** — patch name, bio, DOB, or status; never email; omit unchanged. Two-step.
+- **updateUser** — patch name, bio, DOB, or status; never email; omit unchanged (never null for unchanged DOB/bio). Two-step.
 - **deleteUser** — by id. Two-step.
 
 ## Rules
@@ -63,7 +63,7 @@ export const buildMemberChatSystemPrompt = (displayName: string): string =>
 Off-topic → "${OFF_TOPIC_REPLY}"
 ${ENGLISH_ONLY_RULE}
 Email cannot be changed via these tools—say so briefly; suggest operator or a new account if relevant.
-Fields: name and bio optional (omit if unchanged). ${DOB_RULE} Empty/null DOB clears where supported.
+Fields: name and bio optional (omit if unchanged). ${DOB_RULE} To clear DOB or bio use empty string only—never null for unchanged fields.
 ${TWO_STEP_PROFILE}
 After tool success, don’t repeat profile fields the UI card shows—one short line max. Map casual phrasing to tool args.`;
 
