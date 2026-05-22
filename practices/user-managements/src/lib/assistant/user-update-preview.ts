@@ -1,4 +1,5 @@
 import {
+  CHAT_HUMAN_CONFIRM_MESSAGES,
   DASHBOARD_MESSAGES,
   PROFILE_UI_MESSAGES,
   UI_SYMBOLS,
@@ -36,9 +37,20 @@ export const buildUserUpdatePreview = (
   existing: User,
   input: unknown,
 ): UserUpdatePreviewPayload => {
+  const raw =
+    typeof input === 'object' && input !== null
+      ? (input as Record<string, unknown>)
+      : {};
   const p = sanitizeUserUpdateToolInput(input);
   const id = typeof p.id === 'string' ? p.id : existing.id;
   const changes: UserFieldChange[] = [];
+
+  const statusCandidate: UserStatus | undefined =
+    p.status === 'active' || p.status === 'inactive'
+      ? p.status
+      : raw.status === 'active' || raw.status === 'inactive'
+        ? raw.status
+        : undefined;
 
   if (typeof p.name === 'string') {
     const next = p.name.trim();
@@ -77,15 +89,13 @@ export const buildUserUpdatePreview = (
     }
   }
 
-  if (p.status === 'active' || p.status === 'inactive') {
-    if (p.status !== existing.status) {
-      changes.push({
-        field: 'status',
-        label: PROFILE_UI_MESSAGES.STATUS_LABEL,
-        oldValue: displayStatus(existing.status),
-        newValue: displayStatus(p.status),
-      });
-    }
+  if (statusCandidate && statusCandidate !== existing.status) {
+    changes.push({
+      field: 'status',
+      label: PROFILE_UI_MESSAGES.STATUS_LABEL,
+      oldValue: displayStatus(existing.status),
+      newValue: displayStatus(statusCandidate),
+    });
   }
 
   return {
@@ -95,6 +105,26 @@ export const buildUserUpdatePreview = (
     email: existing.email,
     changes,
   };
+};
+
+/** True when the only pending change is account status (activate/deactivate). */
+export const isStatusOnlyUserUpdatePreview = (
+  preview: UserUpdatePreviewPayload,
+): boolean =>
+  preview.changes.length === 1 && preview.changes[0]?.field === 'status';
+
+/** One-line copy for status-only activate/deactivate confirmations. */
+export const formatStatusOnlyChangeMessage = (
+  preview: UserUpdatePreviewPayload,
+): string => {
+  const change = preview.changes[0];
+  if (!change || change.field !== 'status') {
+    return CHAT_HUMAN_CONFIRM_MESSAGES.PREVIEW_NO_FIELD_CHANGES;
+  }
+  return CHAT_HUMAN_CONFIRM_MESSAGES.PREVIEW_STATUS_WILL_CHANGE(
+    change.oldValue,
+    change.newValue,
+  );
 };
 
 export const tryParseUserUpdatePreview = (

@@ -6,6 +6,7 @@ import {
   CreateUserToolDisplay,
   DuplicateDisplayNameBlockedDisplay,
   GetMyProfileToolDisplay,
+  KnowledgeToolDisplay,
   UpdateMyProfileToolDisplay,
   UpdateUserToolDisplay,
 } from '@/components/assistant-tool-display';
@@ -163,6 +164,16 @@ export const AssistantChatMessageList = ({
                     );
                   }
                   if (title === 'listUsers') return null;
+                  if (title === 'getKnowledge') {
+                    return (
+                      <KnowledgeToolDisplay
+                        key={i}
+                        part={part}
+                        streamSettled={streamSettledForBubble}
+                        variant="getKnowledge"
+                      />
+                    );
+                  }
                   return null;
                 }
                 return null;

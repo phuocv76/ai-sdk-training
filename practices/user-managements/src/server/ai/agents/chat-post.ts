@@ -44,6 +44,22 @@ const LOOKS_LIKE_FIELD_OR_SCHEMA_QUESTION = (s: string): boolean =>
   /\b(?:editable|read[-\s]?only|immutable|updatable|modifiable)\b/.test(s) ||
   /\bwhat\s+(?:can|could)\s+be\s+(?:updated|changed|edited|modified)\b/.test(s);
 
+/**
+ * Activate/deactivate phrasing (e.g. "let activate Join Wick", "make X active").
+ * `active` alone is not a topic keyword because it matches inside `inactive`.
+ */
+const LOOKS_LIKE_ACCOUNT_STATUS_CHANGE = (s: string): boolean =>
+  /\b(?:activate|activating|activated|deactivate|deactivating|deactivated|reactivate|re-activate|enable|enabling|enabled|disable|disabling|disabled)\b/i.test(
+    s,
+  ) ||
+  /\b(?:make|set|turn)\s+.+\s+(?:active|inactive)\b/i.test(s);
+
+const topicAppearsInMessage = (normalized: string, topic: string): boolean => {
+  if (topic.includes(' ')) return normalized.includes(topic);
+  const escaped = topic.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}\\b`).test(normalized);
+};
+
 /** Returns the most recent non-empty user text from UI messages. */
 const latestUserText = (messages: UIMessage[] | undefined): string => {
   if (!messages?.length) return '';
@@ -108,7 +124,10 @@ const isUserManagementRelated = (input: string): boolean => {
   if (LOOKS_LIKE_DATE.test(normalized.trim())) return true;
   if (LOOKS_LIKE_CONFIRMATION.test(normalized)) return true;
   if (LOOKS_LIKE_FIELD_OR_SCHEMA_QUESTION(normalized)) return true;
-  return USER_MANAGEMENT_TOPICS.some((topic) => normalized.includes(topic));
+  if (LOOKS_LIKE_ACCOUNT_STATUS_CHANGE(normalized)) return true;
+  return USER_MANAGEMENT_TOPICS.some((topic) =>
+    topicAppearsInMessage(normalized, topic),
+  );
 };
 
 /** Attaches a newly issued OpenAI key token to a streaming or JSON chat response. */
@@ -233,11 +252,18 @@ export const handleChatPost = async (req: Request): Promise<Response> => {
       );
     }
 
+    const embeddingApiKey =
+      apiKey?.trim() ||
+      env.OPENAI_API_KEY?.trim() ||
+      process.env.OPENAI_API_KEY?.trim() ||
+      null;
+
     const agent = createUserManagementAgent({
       model: languageModel,
       db,
       me,
       latestText,
+      embeddingApiKey,
     });
 
     const uiMessages = sanitizeChatUiMessagesForValidation(body.messages);

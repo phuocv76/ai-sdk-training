@@ -2,13 +2,11 @@
 
 import { useMemo } from 'react';
 
-import { isTextUIPart, isToolUIPart } from 'ai';
-
 import {
   assistantMessageShouldHideProseForDirectoryResultCard,
   directoryToolAwaitingSdkOutput,
-  directoryToolSurfaceIsDeferred,
 } from '@/lib/assistant/directory-tool-stream';
+import { knowledgeToolAwaitingSdkOutput } from '@/lib/assistant/knowledge-tool-stream';
 
 export type AssistantChatMessage = {
   id: string;
@@ -27,35 +25,8 @@ export type AssistantChatMessageViewState = {
   streamingThisAssistant: boolean;
 };
 
-type UIPart = Parameters<typeof isTextUIPart>[0];
-
-const isUIPart = (part: unknown): part is UIPart =>
-  typeof part === 'object' && part !== null && 'type' in part;
-
 const isAssistantRole = (role: string): boolean =>
   role === 'assistant' || role === 'Assistant';
-
-/** True if the message already shows text (after prose-hiding rules) or any tool UI. */
-const assistantBubbleHasVisibleBody = (
-  parts: unknown[],
-  hideAssistantProse: boolean,
-  streamSettledForBubble: boolean,
-): boolean => {
-  for (const part of parts) {
-    if (!isUIPart(part)) continue;
-    if (isTextUIPart(part)) {
-      if (!hideAssistantProse && part.text.trim().length > 0) return true;
-      continue;
-    }
-    if (isToolUIPart(part)) {
-      if (directoryToolSurfaceIsDeferred(part, streamSettledForBubble)) {
-        continue;
-      }
-      return true;
-    }
-  }
-  return false;
-};
 
 const computeMessageViewState = (
   message: AssistantChatMessage,
@@ -78,15 +49,20 @@ const computeMessageViewState = (
     isAssistantRole(message.role) &&
     message.parts.some(directoryToolAwaitingSdkOutput);
 
+  const awaitingKnowledgeSdkFinish =
+    isLast &&
+    isAssistantRole(message.role) &&
+    message.parts.some(knowledgeToolAwaitingSdkOutput);
+
+  /**
+   * Always pulse on the active assistant bubble while the chat is in flight.
+   * Do not gate on visible body: during tool rounds `streamSettledForBubble` is
+   * false so directory cards hide, which previously left only the “Assistant” label.
+   */
   const streamingThisAssistant =
     isLast &&
     isAssistantRole(message.role) &&
-    !assistantBubbleHasVisibleBody(
-      message.parts,
-      hideAssistantTextForDirectoryCard,
-      streamSettledForBubble,
-    ) &&
-    (busy || awaitingDirectorySdkFinish);
+    (busy || awaitingDirectorySdkFinish || awaitingKnowledgeSdkFinish);
 
   return {
     streamSettledForBubble,

@@ -198,6 +198,8 @@ export const DASHBOARD_MESSAGES = {
   UPDATE_USER_TOOL_PENDING: "Updating user…",
   UPDATE_MY_PROFILE_TOOL_PENDING: "Updating your profile…",
   GET_MY_PROFILE_TOOL_PENDING: "Loading your profile…",
+  GET_KNOWLEDGE_TOOL_PENDING: "Searching knowledge base…",
+  ADD_KNOWLEDGE_TOOL_PENDING: "Adding to knowledge base…",
   /** Tool panel headings for confirmation previews (human-readable, not internal tool ids). */
   ASSISTANT_CONFIRM_HEADING_CREATE_USER: "Create user",
   ASSISTANT_CONFIRM_HEADING_UPDATE_USER: "Update user",
@@ -239,9 +241,12 @@ export const CHAT_HUMAN_CONFIRM_MESSAGES = {
     "Are you sure you approve the changes?",
   /** Directory tool confirmation previews (structured `preview` from the server). */
   PREVIEW_USER_ID_LABEL: "User ID",
-  PREVIEW_CHANGE_OLD_LABEL: "Old",
-  PREVIEW_CHANGE_NEW_LABEL: "New",
+  PREVIEW_CHANGE_OLD_LABEL: "From",
+  PREVIEW_CHANGE_NEW_LABEL: "To",
   PREVIEW_NO_FIELD_CHANGES: "No profile fields differ from the current record.",
+  /** Activate/deactivate confirmation (no profile card). */
+  PREVIEW_STATUS_WILL_CHANGE: (from: string, to: string) =>
+    `User will be changed from ${from} to ${to}.`,
   /** Server rejects update/delete preview when ≥2 rows share this display name and the message doesn't identify one row by email/id/DOB. */
   DUPLICATE_DISPLAY_NAME_BLOCKED:
     "More than one directory account uses this name. Below are all matching rows. Repeat your change using **email** or **user id** (or cite the same date of birth shown here) so the right record is targeted.",
@@ -274,6 +279,10 @@ export const CHAT_TOOL_MESSAGES = {
     "Update name, bio, date of birth, or status (active | inactive) for exactly one user id. Do not pick an id when several users share the same name unless the directory has already been narrowed to one match or the human specified email/uuid/uniquely identifying fields—otherwise list matching users (via listUsers) and wait for them to choose. Omit unchanged patch fields entirely—never send date_of_birth or bio as null (null is treated as omit; use empty string only when the human explicitly asked to clear that field). Do not submit email—addresses are fixed after account creation. Setting status to inactive signs the user out everywhere. Two-step: first call with humanAffirmsExecute false or omitted previews; after clear user affirmation, same args with humanAffirmsExecute true applies.",
   DELETE_USER:
     "Delete one user by id. Same ambiguity rule as updateUser: if multiple users share the asked-for name without a distinguishing email or id given, list matches from listUsers and wait for explicit choice before deleteUser. Two-step: first call with humanAffirmsExecute false or omitted previews deletion; after clear user affirmation, same id with humanAffirmsExecute true deletes.",
+  GET_KNOWLEDGE:
+    "Search the product knowledge base for policies, field rules, FAQs, and how the assistant works. Use before answering how-to or policy questions that are not answered by live directory data. Do not invent policy—if no relevant chunks are returned, say you do not know.",
+  ADD_KNOWLEDGE:
+    "Add text to the knowledge base (policies, runbooks, FAQ). Use when the admin provides durable documentation unprompted. Chunks and embeddings are stored automatically.",
 } as const;
 
 /** Canonical HTTP header names shared by the chat API and client transport. */

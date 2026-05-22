@@ -10,3 +10,4 @@ export { GetMyProfileToolDisplay } from './tool-displays';
 export { UpdateMyProfileToolDisplay } from './tool-displays';
 export { UpdateUserToolDisplay } from './tool-displays';
 export { ListUsersToolDisplay } from './list-users-tool-display';
+export { KnowledgeToolDisplay } from './get-knowledge-tool-display';

@@ -2,7 +2,10 @@
 
 import type { ReactNode } from 'react';
 
-import { tryParseUserUpdatePreview } from '@/lib/assistant/user-update-preview';
+import {
+  isStatusOnlyUserUpdatePreview,
+  tryParseUserUpdatePreview,
+} from '@/lib/assistant/user-update-preview';
 import { PROFILE_UI_MESSAGES, UI_SYMBOLS } from '@/constants/messages';
 
 import { previewDetailLine } from './preview-detail-line';
@@ -52,6 +55,9 @@ export function formatDirectoryToolConfirmationPreview(
   if (toolId === 'updateUser' || toolId === 'updateMyProfile') {
     const updatePreview = tryParseUserUpdatePreview(preview);
     if (updatePreview) {
+      if (isStatusOnlyUserUpdatePreview(updatePreview)) {
+        return null;
+      }
       return <UserUpdatePreviewCard preview={updatePreview} />;
     }
     return null;

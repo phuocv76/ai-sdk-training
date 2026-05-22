@@ -43,15 +43,15 @@ export const UserUpdatePreviewCard = ({
                 <p className="text-[var(--dash-muted)]">
                   <span className="font-medium text-[var(--foreground)]/70">
                     {CHAT_HUMAN_CONFIRM_MESSAGES.PREVIEW_CHANGE_OLD_LABEL}
-                  </span>{' '}
-                  <span className="break-words text-[var(--foreground)]/80 line-through decoration-[var(--dash-muted)]/50">
+                  </span>{': '}
+                  <span className="break-words text-[var(--foreground)]/80">
                     {change.oldValue}
                   </span>
                 </p>
                 <p>
                   <span className="font-medium text-[var(--foreground)]/80">
                     {CHAT_HUMAN_CONFIRM_MESSAGES.PREVIEW_CHANGE_NEW_LABEL}
-                  </span>{' '}
+                  </span>{': '}
                   <span className="break-words font-medium text-[var(--foreground)]">
                     {change.newValue}
                   </span>

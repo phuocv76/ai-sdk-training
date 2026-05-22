@@ -11,6 +11,7 @@ import {
 import { type User } from '@/lib/domain/user';
 
 // Server
+import { createRagTools } from '@/server/ai/tools/rag-tools';
 import { createUserManagementAgentTools } from '@/server/ai/tools/user-management-agent-tools';
 
 /**
@@ -22,11 +23,13 @@ export const createUserManagementAgent = ({
   db,
   me,
   latestText,
+  embeddingApiKey,
 }: {
   model: LanguageModel;
   db: D1Database;
   me: Pick<User, 'id' | 'name' | 'role'>;
   latestText: string;
+  embeddingApiKey: string | null;
 }) => {
   const { memberTools, adminTools } = createUserManagementAgentTools({
     db,
@@ -34,7 +37,17 @@ export const createUserManagementAgent = ({
     latestText,
   });
 
-  const tools = me.role === 'admin' ? adminTools : memberTools;
+  const ragTools = createRagTools({
+    db,
+    embeddingApiKey,
+    createdBy: me.id,
+    isAdmin: me.role === 'admin',
+  });
+
+  const tools =
+    me.role === 'admin'
+      ? { ...adminTools, ...ragTools }
+      : { ...memberTools, ...ragTools };
   const instructions =
     me.role === 'admin'
       ? CHAT_SYSTEM_PROMPTS.ADMIN
