@@ -1,7 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 
-import { CHAT_TOOL_MESSAGES } from '@/constants/messages';
+import { CHAT_TOOL_MESSAGES } from '@/server/constants/messages';
 import { ensureKnowledgeBaseSeeded } from '@/server/ai/rag/ensure-seeded';
 import { findRelevantContent } from '@/server/ai/rag/embedding';
 import { ingestKnowledgeContent } from '@/server/ai/rag/ingest';

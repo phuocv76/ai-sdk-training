@@ -10,19 +10,20 @@ import {
 } from 'ai';
 
 import { CHAT_AI_PROVIDER, type ChatAiProviderId } from '@/constants/ai-provider';
-import { API_MESSAGES, REQUEST_HEADERS } from '@/constants/messages';
+import { REQUEST_HEADERS } from '@/constants/messages';
+import { API_MESSAGES } from '@/server/constants/messages';
 import {
   wrapUserManagementChatModel,
   wrapUserManagementOllamaChatModel,
-} from '@/server/ai/agents/chat-language-model';
+} from '@/server/ai/utils/chat-language-model';
 import { requireDatabase, resolveSessionUser } from '@/server/auth/cookies';
-import { sanitizeChatUiMessagesForValidation } from '@/server/ai/agents/sanitize-chat-ui-messages';
+import { sanitizeChatUiMessagesForValidation } from '@/server/ai/utils/sanitize-chat-ui-messages';
 import {
   registerOpenAiApiKey,
   resolveOpenAiApiKeyFromToken,
-} from '@/server/ai/agents/openai-api-key-tokens';
+} from '@/server/ai/utils/openai-api-key-tokens';
 import { createUserManagementAgent } from '@/server/ai/agents/user-management-agent';
-import { USER_MANAGEMENT_TOPICS } from '@/constants/promts';
+import { USER_MANAGEMENT_TOPICS } from '@/server/constants/promts';
 
 /** Loose pattern so pasted emails (e.g. add-member requests) count as on-topic. */
 const LOOKS_LIKE_EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;

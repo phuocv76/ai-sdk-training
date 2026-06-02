@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 // Constants
-import { API_MESSAGES } from "@/constants/messages";
+import { API_MESSAGES } from "@/server/constants/messages";
 
 // Domain
 import { userResponseBody } from "@/lib/domain/user";

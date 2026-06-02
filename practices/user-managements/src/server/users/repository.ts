@@ -1,5 +1,5 @@
 // Constants
-import { USER_DOMAIN_ERRORS } from "@/constants/messages";
+import { USER_DOMAIN_ERRORS } from "@/server/constants/messages";
 
 // Domain
 import { normalizeDirectoryDisplayNameKey } from "@/lib/directory/display-name-match";

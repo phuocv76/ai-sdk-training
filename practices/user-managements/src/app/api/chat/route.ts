@@ -1,5 +1,5 @@
-import { handleChatPost } from "@/server/ai/agents/chat-post";
+import { handleChatPost } from '@/server/ai/utils/chat-post';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export const POST = handleChatPost;

@@ -5,7 +5,7 @@ import { ToolLoopAgent, stepCountIs, type LanguageModel } from 'ai';
 import {
   buildMemberChatSystemPrompt,
   CHAT_SYSTEM_PROMPTS,
-} from '@/constants/promts';
+} from '@/server/constants/promts';
 
 // Domain
 import { type User } from '@/lib/domain/user';

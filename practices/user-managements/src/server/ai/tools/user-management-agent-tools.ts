@@ -3,11 +3,13 @@ import { tool } from 'ai';
 
 // Constants
 import {
-  API_MESSAGES,
   CHAT_HUMAN_CONFIRM_MESSAGES,
+} from '@/constants/messages';
+import {
+  API_MESSAGES,
   CHAT_TOOL_MESSAGES,
   USER_DOMAIN_ERRORS,
-} from '@/constants/messages';
+} from '@/server/constants/messages';
 
 // Domain
 import { buildUserUpdatePreview } from '@/lib/assistant/user-update-preview';

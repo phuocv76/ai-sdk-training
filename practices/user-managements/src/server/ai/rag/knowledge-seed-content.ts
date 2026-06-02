@@ -1,10 +1,12 @@
 import {
-  API_MESSAGES,
   CHAT_HUMAN_CONFIRM_MESSAGES,
+} from '@/constants/messages';
+import {
+  API_MESSAGES,
   CHAT_TOOL_MESSAGES,
   USER_DOMAIN_ERRORS,
-} from '@/constants/messages';
-import { CHAT_SYSTEM_PROMPTS } from '@/constants/promts';
+} from '@/server/constants/messages';
+import { CHAT_SYSTEM_PROMPTS } from '@/server/constants/promts';
 
 /** Static knowledge ingested on first RAG use (policies, tool rules, FAQs). */
 export const buildKnowledgeSeedDocument = (): string =>

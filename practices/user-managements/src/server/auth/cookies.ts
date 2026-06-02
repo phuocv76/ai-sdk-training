@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 // Constants
-import { DATABASE_MESSAGES } from "@/constants/messages";
+import { DATABASE_MESSAGES } from "@/server/constants/messages";
 
 // Domain
 import type { User } from "@/lib/domain/user";
