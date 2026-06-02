@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 // Constants
 import { DASHBOARD_MESSAGES } from '@/constants/messages';
 
@@ -18,31 +20,79 @@ export const AssistantChatComposer = ({
   setInput,
   onSubmit,
 }: AssistantChatComposerProps) => {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const isInputEmpty = !input.trim();
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    const baseHeight = 45; // ~20% smaller than previous 56px baseline
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.max(baseHeight, textarea.scrollHeight)}px`;
+  }, [input]);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter' || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (busy || !input.trim()) {
+      return;
+    }
+
+    event.currentTarget.form?.requestSubmit();
+  };
+
   return (
     <form
       onSubmit={(e) => void onSubmit(e)}
       className="border-t border-[var(--dash-border)] bg-[var(--dash-card)] p-4"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-stretch rounded-xl border border-[var(--dash-border)] bg-[var(--background)]">
         <textarea
+          ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
           placeholder={
             isAdmin
               ? DASHBOARD_MESSAGES.PLACEHOLDER_ADMIN_INPUT
               : DASHBOARD_MESSAGES.PLACEHOLDER_MEMBER_INPUT
           }
-          rows={2}
+          rows={1}
           disabled={busy}
-          className="min-h-[48px] flex-1 resize-none rounded-xl border border-[var(--dash-border)] bg-[var(--background)] px-3 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--dash-muted)] focus:border-[var(--dash-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--dash-accent)]/20 disabled:opacity-60"
+          className="w-full flex-1 resize-none overflow-hidden rounded-l-xl rounded-r-none bg-transparent px-3 py-3 text-sm leading-5 text-[var(--foreground)] placeholder:text-[var(--dash-muted)] focus:outline-none disabled:opacity-60"
         />
-        <button
-          type="submit"
-          disabled={busy || !input.trim()}
-          className="shrink-0 rounded-xl bg-[var(--dash-accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-900/20 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          {busy ? DASHBOARD_MESSAGES.SEND_BUSY : DASHBOARD_MESSAGES.SEND}
-        </button>
+        <div className="inline-flex shrink-0 items-center justify-center rounded-l-none rounded-r-xl px-1.5">
+          <button
+            type="submit"
+            disabled={busy || isInputEmpty}
+            aria-label={DASHBOARD_MESSAGES.SEND}
+            className={`inline-flex h-7 w-7 items-center justify-center rounded-lg transition-all disabled:cursor-not-allowed ${
+              isInputEmpty ? 'opacity-45' : 'opacity-100'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className="h-7 w-7 bg-emerald-500"
+              style={{
+                maskImage: "url('/icons/send-icon.png')",
+                maskRepeat: "no-repeat",
+                maskPosition: "center",
+                maskSize: "88%",
+                WebkitMaskImage: "url('/icons/send-icon.png')",
+                WebkitMaskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                WebkitMaskSize: "88%",
+              }}
+            />
+          </button>
+        </div>
       </div>
     </form>
   );

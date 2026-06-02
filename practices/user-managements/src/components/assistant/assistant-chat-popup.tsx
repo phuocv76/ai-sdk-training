@@ -1,22 +1,22 @@
-"use client";
+'use client';
 
-import { useMemo, useState } from "react";
+import { useMemo, useState } from 'react';
 
 // Constants
-import type { ChatAiProviderId } from "@/constants/ai-provider";
-import { CHAT_AI_PROVIDER } from "@/constants/ai-provider";
-import { DASHBOARD_MESSAGES } from "@/constants/messages";
+import type { ChatAiProviderId } from '@/constants/ai-provider';
+import { CHAT_AI_PROVIDER } from '@/constants/ai-provider';
+import { DASHBOARD_MESSAGES } from '@/constants/messages';
 
 // Libraries
-import type { User } from "@/lib/domain/user";
-import { renderInlineMarkdownBold } from "@/lib/markdown/render-inline-markdown-bold";
+import type { User } from '@/lib/domain/user';
+import { renderInlineMarkdownBold } from '@/lib/markdown/render-inline-markdown-bold';
 
-import { AssistantChatComposer } from "./assistant-chat-composer";
-import { AssistantChatMessageList } from "./assistant-chat-message-list";
+import { AssistantChatComposer } from './assistant-chat-composer';
+import { AssistantChatMessageList } from './assistant-chat-message-list';
 
 type ChatMessage = {
   id: string;
-  role: "user" | "assistant" | string;
+  role: 'user' | 'assistant' | string;
   parts: unknown[];
 };
 
@@ -40,6 +40,36 @@ const SCALE_STEP = 0.1;
 const BASE_WIDTH = 430;
 const BASE_HEIGHT = 620;
 
+const ADMIN_CHAT_SUGGESTIONS = [
+  {
+    label: 'Invite user',
+    prompt: 'I want to invite a new user with the email john.doe@company.com',
+  },
+  {
+    label: 'Update profile',
+    prompt: 'Update bio for john.doe@company.com to Senior frontend engineer',
+  },
+  {
+    label: 'Deactivate user',
+    prompt: 'Deactivate user with email john.doe@company.com',
+  },
+] as const;
+
+const MEMBER_CHAT_SUGGESTIONS = [
+  {
+    label: 'Show profile',
+    prompt: 'Show my profile',
+  },
+  {
+    label: 'Update name',
+    prompt: 'Set my first name to John',
+  },
+  {
+    label: 'Update birthday',
+    prompt: 'Update my date of birth to 1995-06-01',
+  },
+] as const;
+
 export const AssistantChatPopup = ({
   isAdmin,
   currentUser,
@@ -55,6 +85,9 @@ export const AssistantChatPopup = ({
 }: AssistantChatPopupProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [scale, setScale] = useState(1);
+  const suggestions = isAdmin
+    ? ADMIN_CHAT_SUGGESTIONS
+    : MEMBER_CHAT_SUGGESTIONS;
 
   const panelStyle = useMemo(() => {
     const width = Math.round(BASE_WIDTH * scale);
@@ -70,11 +103,15 @@ export const AssistantChatPopup = ({
     : DASHBOARD_MESSAGES.PROFILE_ASSISTANT_TITLE;
 
   const decreaseScale = () => {
-    setScale((value) => Math.max(MIN_SCALE, Number((value - SCALE_STEP).toFixed(2))));
+    setScale((value) =>
+      Math.max(MIN_SCALE, Number((value - SCALE_STEP).toFixed(2))),
+    );
   };
 
   const increaseScale = () => {
-    setScale((value) => Math.min(MAX_SCALE, Number((value + SCALE_STEP).toFixed(2))));
+    setScale((value) =>
+      Math.min(MAX_SCALE, Number((value + SCALE_STEP).toFixed(2))),
+    );
   };
 
   return (
@@ -129,9 +166,9 @@ export const AssistantChatPopup = ({
                     value={aiProvider}
                     onChange={(e) =>
                       onAiProviderChange(
-                        e.target.value === CHAT_AI_PROVIDER.OLLAMA ?
-                          CHAT_AI_PROVIDER.OLLAMA
-                        : CHAT_AI_PROVIDER.OPENAI,
+                        e.target.value === CHAT_AI_PROVIDER.OLLAMA
+                          ? CHAT_AI_PROVIDER.OLLAMA
+                          : CHAT_AI_PROVIDER.OPENAI,
                       )
                     }
                     disabled={busy}
@@ -189,6 +226,22 @@ export const AssistantChatPopup = ({
             </p>
           ) : null}
 
+          <div className="px-5 pb-2 pt-3">
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((suggestion) => (
+                <button
+                  key={suggestion.label}
+                  type="button"
+                  onClick={() => setInput(suggestion.prompt)}
+                  disabled={busy}
+                  className="rounded-full border border-[var(--dash-border)] bg-[var(--background)] px-3 py-1 text-xs font-medium text-[var(--foreground)] transition hover:border-[var(--dash-accent)] hover:text-[var(--dash-accent)] disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label={`Use suggestion: ${suggestion.label}`}
+                >
+                  {suggestion.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <AssistantChatComposer
             isAdmin={isAdmin}
