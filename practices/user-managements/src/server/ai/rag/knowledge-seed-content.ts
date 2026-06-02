@@ -6,17 +6,17 @@ import {
   CHAT_TOOL_MESSAGES,
   USER_DOMAIN_ERRORS,
 } from '@/server/constants/messages';
-import { CHAT_SYSTEM_PROMPTS } from '@/server/constants/promts';
+import { buildAdminChatSystemPrompt } from '@/server/constants/promts';
 
 /** Static knowledge ingested on first RAG use (policies, tool rules, FAQs). */
-export const buildKnowledgeSeedDocument = (): string =>
-  [
+export const buildKnowledgeSeedDocument = (): string => {
+  return [
     '# User management knowledge base',
     '## Product scope',
     API_MESSAGES.CHAT_OFF_TOPIC,
     'The assistant helps with profiles, users, roles, and account updates in English only.',
     '## Admin directory rules',
-    CHAT_SYSTEM_PROMPTS.ADMIN,
+    buildAdminChatSystemPrompt(),
     '## Tool reference',
     `getMyProfile: ${CHAT_TOOL_MESSAGES.GET_MY_PROFILE}`,
     `updateMyProfile: ${CHAT_TOOL_MESSAGES.UPDATE_MY_PROFILE}`,
@@ -44,3 +44,4 @@ export const buildKnowledgeSeedDocument = (): string =>
     'User status: active or inactive. Inactive users cannot sign in.',
     'Roles: admin (directory management) or member (own profile only).',
   ].join('\n\n');
+};
