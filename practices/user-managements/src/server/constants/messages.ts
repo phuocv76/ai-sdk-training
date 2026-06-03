@@ -21,6 +21,10 @@ export const API_MESSAGES = {
   /** Shown when the assistant stream fails (model, tools, or transport). */
   CHAT_STREAM_ERROR:
     'The assistant could not finish that reply. Please try again in a moment.',
+  /** Returned when a request references a chat thread the user does not own. */
+  THREAD_NOT_FOUND: 'Conversation not found.',
+  /** Returned when a thread title PATCH omits a usable title. */
+  THREAD_TITLE_REQUIRED: 'A conversation title is required.',
 } as const;
 
 /** D1 / infrastructure errors from `requireDatabase`. */

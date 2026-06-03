@@ -26,6 +26,7 @@ import {
 
 // Hooks
 import { useAssistantChatTransport } from "@/hooks/use-assistant-chat-transport";
+import { useChatThreads } from "@/hooks/use-chat-threads";
 
 // Libraries
 import { displayName, type User } from "@/lib/domain/user";
@@ -84,7 +85,26 @@ export const UserDashboard = () => {
     window.localStorage.setItem(CHAT_AI_PROVIDER_STORAGE_KEY, aiProvider);
   }, [aiProvider]);
 
-  const chatTransport = useAssistantChatTransport(openAiApiKey, aiProvider);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const activeThreadIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeThreadIdRef.current = activeThreadId;
+  }, [activeThreadId]);
+
+  const {
+    threads,
+    loading: threadsLoading,
+    refresh: refreshThreads,
+    createThread,
+    fetchThreadMessages,
+    deleteThread,
+  } = useChatThreads(Boolean(currentUser));
+
+  const chatTransport = useAssistantChatTransport(
+    openAiApiKey,
+    aiProvider,
+    activeThreadIdRef,
+  );
 
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(
@@ -187,15 +207,16 @@ export const UserDashboard = () => {
     });
   }, [users, search]);
 
-  /** After an assistant turn, refresh session, directory, and any open profile. */
+  /** After an assistant turn, refresh session, directory, threads, open profile. */
   const refreshAfterChat = async () => {
     await refresh();
     if (isAdmin) void loadUsers();
+    void refreshThreads();
     const selId = profileDetailSelectionRef.current;
     if (selId && profileDetailOpen) void loadProfileDetail(selId);
   };
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, sendMessage, status, error, setMessages } = useChat({
     transport: chatTransport,
     onFinish: () => {
       void refreshAfterChat();
@@ -204,11 +225,53 @@ export const UserDashboard = () => {
 
   const busy = status === "streaming" || status === "submitted";
 
-  /** Sends the composer text as the next user message when not busy. */
+  /** Opens an existing thread: loads its persisted history into the chat. */
+  const handleSelectThread = useCallback(
+    async (id: string) => {
+      if (busy || id === activeThreadIdRef.current) return;
+      activeThreadIdRef.current = id;
+      setActiveThreadId(id);
+      const loaded = await fetchThreadMessages(id);
+      setMessages(loaded);
+    },
+    [busy, fetchThreadMessages, setMessages],
+  );
+
+  /** Clears the chat to start a fresh (not-yet-persisted) conversation. */
+  const handleNewThread = useCallback(() => {
+    if (busy) return;
+    activeThreadIdRef.current = null;
+    setActiveThreadId(null);
+    setMessages([]);
+  }, [busy, setMessages]);
+
+  /** Deletes a thread; if it was active, resets to an empty conversation. */
+  const handleDeleteThread = useCallback(
+    async (id: string) => {
+      const ok = await deleteThread(id);
+      if (ok && activeThreadIdRef.current === id) {
+        activeThreadIdRef.current = null;
+        setActiveThreadId(null);
+        setMessages([]);
+      }
+    },
+    [deleteThread, setMessages],
+  );
+
+  /** Sends the composer text, creating a thread first when none is active. */
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
     if (!text || busy) return;
+
+    if (!activeThreadIdRef.current) {
+      const thread = await createThread(text);
+      if (thread) {
+        activeThreadIdRef.current = thread.id;
+        setActiveThreadId(thread.id);
+      }
+    }
+
     setInput("");
     await sendMessage({ text });
   };
@@ -500,6 +563,12 @@ export const UserDashboard = () => {
         input={input}
         setInput={setInput}
         onSubmit={onSubmit}
+        threads={threads}
+        activeThreadId={activeThreadId}
+        threadsLoading={threadsLoading}
+        onSelectThread={handleSelectThread}
+        onNewThread={handleNewThread}
+        onDeleteThread={handleDeleteThread}
       />
     </div>
   );

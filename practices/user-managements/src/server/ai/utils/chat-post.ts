@@ -23,6 +23,10 @@ import {
   resolveOpenAiApiKeyFromToken,
 } from '@/server/ai/utils/openai-api-key-tokens';
 import { createUserManagementAgent } from '@/server/ai/agents/user-management-agent';
+import {
+  chatThreadOwnedByUser,
+  saveChatThreadMessages,
+} from '@/server/chat/threads-repository';
 import { USER_MANAGEMENT_TOPICS } from '@/server/constants/promts';
 
 /** Loose pattern so pasted emails (e.g. add-member requests) count as on-topic. */
@@ -152,7 +156,7 @@ const withIssuedOpenAiKeyToken = (
  *   optional `x-openai-api-key` on first use, and `x-openai-api-key-token` thereafter.
  */
 export const handleChatPost = async (req: Request): Promise<Response> => {
-  let body: { messages: UIMessage[]; provider?: unknown };
+  let body: { messages: UIMessage[]; provider?: unknown; threadId?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -182,6 +186,21 @@ export const handleChatPost = async (req: Request): Promise<Response> => {
   const { env } = await getCloudflareContext({ async: true });
   const db = dbCtx.db;
   const provider = parseChatProvider(body.provider);
+
+  // Only persist to a thread the caller actually owns; unknown/foreign ids are
+  // silently ignored so chat still works (just statelessly).
+  const requestedThreadId =
+    typeof body.threadId === 'string' && body.threadId.trim()
+      ? body.threadId.trim()
+      : null;
+  const persistThreadId =
+    requestedThreadId && (await chatThreadOwnedByUser(db, me.id, requestedThreadId))
+      ? requestedThreadId
+      : null;
+  const persistMessages = persistThreadId
+    ? (messages: UIMessage[]) =>
+        saveChatThreadMessages(db, me.id, persistThreadId, messages)
+    : undefined;
 
   const headerKey = req.headers
     .get(REQUEST_HEADERS.OPENAI_API_KEY_OVERRIDE)
@@ -275,6 +294,15 @@ export const handleChatPost = async (req: Request): Promise<Response> => {
         uiMessages,
         abortSignal: req.signal,
         onError: handleChatAiStreamError,
+        ...(persistMessages
+          ? {
+              // Persistence mode: SDK merges history + response into `messages`.
+              // Cast avoids fighting the agent's tool-narrowed UIMessage generic.
+              originalMessages: uiMessages as unknown as never,
+              onFinish: (event: { messages: UIMessage[] }) =>
+                persistMessages(event.messages),
+            }
+          : {}),
       }),
       issuedOpenAiKeyToken,
     );
