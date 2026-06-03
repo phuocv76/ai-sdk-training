@@ -20,6 +20,7 @@ import {
   type AssistantChatMessage,
   useAssistantChatMessageList,
 } from '@/hooks/use-assistant-chat-message-list';
+import { useAssistantResponseToolNames } from '@/hooks/use-assistant-response-tool-names';
 
 type AssistantChatMessageListProps = {
   messages: AssistantChatMessage[];
@@ -54,6 +55,7 @@ export const AssistantChatMessageList = ({
   currentUser,
   busy,
 }: AssistantChatMessageListProps) => {
+  const toolNames = useAssistantResponseToolNames();
   const { showDetachedAssistantBusy, messageViewStates } =
     useAssistantChatMessageList({ messages, busy });
 
@@ -118,7 +120,7 @@ export const AssistantChatMessageList = ({
                 }
                 if (isToolUIPart(part)) {
                   const title = getToolName(part);
-                  if (title === 'createUser') {
+                  if (title === toolNames.createUser) {
                     return (
                       <CreateUserToolDisplay
                         key={i}
@@ -127,7 +129,7 @@ export const AssistantChatMessageList = ({
                       />
                     );
                   }
-                  if (title === 'updateUser') {
+                  if (title === toolNames.updateUser) {
                     return (
                       <UpdateUserToolDisplay
                         key={i}
@@ -136,7 +138,7 @@ export const AssistantChatMessageList = ({
                       />
                     );
                   }
-                  if (title === 'updateMyProfile') {
+                  if (title === toolNames.updateMyProfile) {
                     return (
                       <UpdateMyProfileToolDisplay
                         key={i}
@@ -145,7 +147,7 @@ export const AssistantChatMessageList = ({
                       />
                     );
                   }
-                  if (title === 'getMyProfile') {
+                  if (title === toolNames.getMyProfile) {
                     return (
                       <GetMyProfileToolDisplay
                         key={i}
@@ -154,7 +156,7 @@ export const AssistantChatMessageList = ({
                       />
                     );
                   }
-                  if (title === 'deleteUser') {
+                  if (title === toolNames.deleteUser) {
                     return (
                       <DuplicateDisplayNameBlockedDisplay
                         key={i}
@@ -163,8 +165,8 @@ export const AssistantChatMessageList = ({
                       />
                     );
                   }
-                  if (title === 'listUsers') return null;
-                  if (title === 'getKnowledge') {
+                  if (title === toolNames.listUsers) return null;
+                  if (title === toolNames.getKnowledge) {
                     return (
                       <KnowledgeToolDisplay
                         key={i}
