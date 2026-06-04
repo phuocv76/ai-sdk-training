@@ -8,7 +8,6 @@ const NON_ENGLISH_REPLY =
 
 /** Chat language (shared). */
 const ENGLISH_ONLY_RULE = `English only: reply in English. If the **latest user message** is not in English, reply **only** with: "${NON_ENGLISH_REPLY}" Do not translate, mirror, or answer in other languages.`;
-
 /** How humans may phrase DOB vs what tools accept (shared). */
 const DOB_RULE =
   'Accept birth dates in natural or common numeric/ISO forms; infer the calendar day. Resolve relative dates from today when explicit enough (e.g. "yesterday", "last year", "2 years ago") and convert to YYYY-MM-DD. Tools require date_of_birth as YYYY-MM-DD only (strip time/timezone). If day/month is ambiguous, ask once. If the phrase is still not specific to one day, ask one follow-up.';
@@ -24,7 +23,7 @@ const buildCurrentDateRule = (): string => {
 
 /** Two-step tool pattern when the UI handles confirmation. */
 const HUMAN_AFFIRMS_EXECUTE_RULE =
-  'Use tool field humanAffirmsExecute: omit or false for preview; set true only when the **latest user message** clearly affirms **this** preview (you interpret meaning—typos, approval, go ahead, informal yes). Never true if they refused, only asked a question, or want different changes.';
+  'Use tool field humanAffirmsExecute: omit or false for preview; set true only when the **latest user message** clearly affirms **this** preview (you interpret meaning—typos, approval, go ahead, informal yes). Single-word confirmations (e.g. "approve", "approved", "confirm", "yes", "ok", "proceed") count as clear affirmation when a preview is pending. Never true if they refused, only asked a question, or want different changes.';
 
 const TWO_STEP_DIRECTORY = `${HUMAN_AFFIRMS_EXECUTE_RULE} createUser, updateUser, deleteUser: first call = preview; second call with the **same** args only after that affirmation executes. While pending, do not repeat the UI's confirm instructions—at most one short line.`;
 
@@ -55,11 +54,12 @@ ${buildCurrentDateRule()}
 - **deleteUser** — by id. Two-step.
 - **getKnowledge** — semantic search over ingested docs (policies, tool rules).
 - **addKnowledge** — append documentation to the knowledge base (admin only).
+- **Follow-ups** — for follow-up questions, call the matching tool first (directory/profile tools for live user data, getKnowledge for policies/rules); do not answer with a generic reply.
 
 ## Routing Rules
 - ${KNOWLEDGE_BASE_RULE}
 - ${TWO_STEP_DIRECTORY}
-- **Email** — never change post-creation; refuse workarounds. Multi-level domains are fine—pass through to tools; don’t invent invalid-format rejections.
+- **Email** — never change post-creation; refuse workarounds. Multi-level domains are fine. For malformed addresses (e.g. two @), return the tool error and treat it as invalid-format (not duplicate).
 - **createUser** — have email, name, unambiguous DOB before calling; explain unique-email collisions.
 - **Duplicate display names** — if several rows share the same name without email/id/unique combo, listUsers → numbered list (name, email, id), ask which; then preview for that id only.
 - **Activate / deactivate** — always in scope for admins: updateUser with status \`active\` or \`inactive\` (e.g. "let activate Join Wick", "deactivate join@testing.com", "make this user active"). Resolve the account via findUserByEmail or listUsers when only a name is given—never treat that as off-topic. Never deactivate the **signed-in admin’s** own account.

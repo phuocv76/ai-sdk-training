@@ -1,7 +1,7 @@
 "use client";
 
 import { DefaultChatTransport } from "ai";
-import { useEffect, useMemo, useRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import type { ChatAiProviderId } from "@/constants/ai-provider";
 import { REQUEST_HEADERS } from "@/constants/messages";
@@ -10,13 +10,11 @@ import { REQUEST_HEADERS } from "@/constants/messages";
  * Chat transport: sends `x-openai-api-key` only until the server returns
  * `x-openai-api-key-token`, then sends that token on every subsequent request.
  *
- * The active conversation thread is read from `threadIdRef` on every send so
- * the transport stays stable while the user switches threads.
+ * Conversation state is kept in the active `useChat` session only.
  */
 export const useAssistantChatTransport = (
   openAiApiKey: string,
   aiProvider: ChatAiProviderId,
-  threadIdRef: RefObject<string | null>,
 ) => {
   const openAiKeyTokenRef = useRef<string | null>(null);
 
@@ -64,11 +62,10 @@ export const useAssistantChatTransport = (
             trigger,
             messageId,
             provider: aiProvider,
-            threadId: threadIdRef.current,
           },
         }),
       }),
-    [openAiApiKey, aiProvider, threadIdRef],
+    [openAiApiKey, aiProvider],
   );
   /* eslint-enable react-hooks/refs */
 };

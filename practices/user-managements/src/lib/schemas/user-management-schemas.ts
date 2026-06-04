@@ -6,7 +6,13 @@ import { z } from "zod";
  */
 export const humanAffirmsExecuteField = z.object({
   humanAffirmsExecute: z
-    .boolean()
+    .preprocess((value) => {
+      if (typeof value !== "string") return value;
+      const normalized = value.trim().toLowerCase();
+      if (normalized === "true") return true;
+      if (normalized === "false") return false;
+      return value;
+    }, z.boolean())
     .optional()
     .describe(
       "Preview: omit or false. Execute: true only if the latest user message clearly affirms this exact preview (typos/informal ok). False if unsure, they refused, or they only asked questions.",
@@ -23,6 +29,8 @@ export const deleteUserToolInputSchema =
   userIdPayloadSchema.merge(humanAffirmsExecuteField);
 export const userNameSchema = z.string().min(1).max(120);
 export const userEmailSchema = z.string().email();
+/** Chat tools accept raw email text; tool execute validates and returns friendly errors. */
+export const toolEmailInputSchema = z.string().min(1).max(255);
 export const signupEmailSchema = userEmailSchema.max(255);
 export const userBioSchema = z.string().max(8000);
 export const userStatusSchema = z.enum(["active", "inactive"]);
@@ -53,9 +61,9 @@ export const bioPatchSchema = z
 /** Common API body schemas shared across chat tools and auth routes. */
 export const createUserToolInputSchema = z
   .object({
-    name: userNameSchema,
-    email: userEmailSchema,
-    date_of_birth: dateOfBirthSchema,
+    name: userNameSchema.optional(),
+    email: toolEmailInputSchema.optional(),
+    date_of_birth: dateOfBirthSchema.optional(),
     bio: userBioSchema.optional(),
   })
   .merge(humanAffirmsExecuteField);
@@ -98,5 +106,5 @@ export const loginBodySchema = z.object({
 });
 
 export const findUserByEmailPayloadSchema = z.object({
-  email: userEmailSchema,
+  email: toolEmailInputSchema,
 });

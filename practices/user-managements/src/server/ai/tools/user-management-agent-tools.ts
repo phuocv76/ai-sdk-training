@@ -21,6 +21,7 @@ import {
   deleteUserToolInputSchema,
   emptyObjectSchema,
   findUserByEmailPayloadSchema,
+  userEmailSchema,
   updateMyProfileToolInputSchema,
   updateUserToolInputSchema,
   userIdPayloadSchema,
@@ -51,6 +52,9 @@ type WorkflowResult<T> =
       preview: unknown;
     };
 
+const INVALID_EMAIL_FORMAT_ERROR =
+  'invalid-format: Invalid email address. Please use a valid format like name@example.com.';
+
 /** Strip model-only mutation flag from preview payloads shown to the client. */
 const stripHumanAffirmsFromToolInput = (input: unknown): unknown => {
   if (typeof input !== 'object' || input === null) return input;
@@ -80,6 +84,65 @@ const shouldExecuteMutation = (latestText: string, input: unknown): boolean => {
   if (!latestText.trim()) return false;
   if (looksLikeUserRefusal(latestText)) return false;
   return true;
+};
+
+const DOB_ISO_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+const extractAgeYears = (text: string): number | null => {
+  const m = text.match(/\b(\d{1,3})\s*(?:years?\s*old|yrs?\s*old|y\/o|yo)\b/i);
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (!Number.isFinite(n) || n < 0 || n > 130) return null;
+  return n;
+};
+
+const ageFromDate = (
+  year: number,
+  month: number,
+  day: number,
+  now: Date,
+): number => {
+  let age = now.getFullYear() - year;
+  const nowMonth = now.getMonth() + 1;
+  const nowDay = now.getDate();
+  if (nowMonth < month || (nowMonth === month && nowDay < day)) age -= 1;
+  return age;
+};
+
+/**
+ * Guardrail for LLM DOB extraction:
+ * when latest text includes explicit age (e.g. "22 years old"), ensure the
+ * DOB year matches that age for the provided month/day.
+ */
+const normalizeCreateDobFromLatestText = (
+  latestText: string,
+  dateOfBirth: string | undefined,
+): string | undefined => {
+  if (typeof dateOfBirth !== 'string') return dateOfBirth;
+  const m = dateOfBirth.trim().match(DOB_ISO_RE);
+  if (!m) return dateOfBirth;
+
+  const parsedAge = extractAgeYears(latestText);
+  if (parsedAge === null) return dateOfBirth;
+
+  const year = Number(m[1]);
+  const month = Number(m[2]);
+  const day = Number(m[3]);
+
+  const now = new Date();
+  const inferredAge = ageFromDate(year, month, day, now);
+  if (inferredAge === parsedAge) return dateOfBirth;
+
+  let correctedYear = now.getFullYear() - parsedAge;
+  const nowMonth = now.getMonth() + 1;
+  const nowDay = now.getDate();
+  if (nowMonth < month || (nowMonth === month && nowDay < day)) {
+    correctedYear -= 1;
+  }
+  if (correctedYear < 1900 || correctedYear > now.getFullYear()) {
+    return dateOfBirth;
+  }
+  return `${String(correctedYear).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 };
 
 /**
@@ -245,11 +308,18 @@ export const createUserManagementAgentTools = ({
       description: CHAT_TOOL_MESSAGES.FIND_USER_BY_EMAIL,
       inputSchema: findUserByEmailPayloadSchema,
       execute: async ({ email }) => {
-        const user = await getUserByEmail(db, email);
+        const normalizedEmail = email.trim().toLowerCase();
+        if (!userEmailSchema.safeParse(normalizedEmail).success) {
+          return {
+            ok: false as const,
+            error: INVALID_EMAIL_FORMAT_ERROR,
+          };
+        }
+        const user = await getUserByEmail(db, normalizedEmail);
         if (!user) {
           return {
             notFound: true as const,
-            emailSearched: email.trim().toLowerCase(),
+            emailSearched: normalizedEmail,
           };
         }
         return { user: userResponseBody(user) };
@@ -263,11 +333,60 @@ export const createUserManagementAgentTools = ({
       description: CHAT_TOOL_MESSAGES.CREATE_USER,
       inputSchema: createUserToolInputSchema,
       execute: async (input) => {
+        const normalizedInput = {
+          ...input,
+          date_of_birth: normalizeCreateDobFromLatestText(
+            latestText,
+            input.date_of_birth,
+          ),
+        };
+        const missingFields: string[] = [];
+        if (
+          typeof normalizedInput.name !== 'string' ||
+          !normalizedInput.name.trim()
+        ) {
+          missingFields.push('name');
+        }
+        if (
+          typeof normalizedInput.email !== 'string' ||
+          !normalizedInput.email.trim()
+        ) {
+          missingFields.push('email');
+        }
+        if (
+          typeof normalizedInput.date_of_birth !== 'string' ||
+          !normalizedInput.date_of_birth.trim()
+        ) {
+          missingFields.push('date_of_birth');
+        }
+        if (missingFields.length > 0) {
+          return {
+            ok: false as const,
+            error: `Missing required field(s) for createUser: ${missingFields.join(', ')}`,
+          };
+        }
+        const normalizedName = (normalizedInput.name as string).trim();
+        const normalizedEmail = (normalizedInput.email as string)
+          .trim()
+          .toLowerCase();
+        const normalizedDob = (normalizedInput.date_of_birth as string).trim();
+        if (!userEmailSchema.safeParse(normalizedEmail).success) {
+          return {
+            ok: false as const,
+            error: INVALID_EMAIL_FORMAT_ERROR,
+          };
+        }
+
         const workflow = createHumanInLoopWorkflow(latestText, 'createUser');
-        const result = await workflow(input, async () => {
-          const { humanAffirmsExecute, ...payload } = input;
+        const result = await workflow(normalizedInput, async () => {
+          const { humanAffirmsExecute, ...payload } = normalizedInput;
           void humanAffirmsExecute;
-          return createUser(db, payload);
+          return createUser(db, {
+            ...payload,
+            name: normalizedName,
+            email: normalizedEmail,
+            date_of_birth: normalizedDob,
+          });
         });
         if (!result.ok) {
           if ('requiresConfirmation' in result) return result;

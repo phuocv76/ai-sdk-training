@@ -7,16 +7,12 @@ import type { ChatAiProviderId } from '@/constants/ai-provider';
 import { CHAT_AI_PROVIDER } from '@/constants/ai-provider';
 import { DASHBOARD_MESSAGES } from '@/constants/messages';
 
-// Hooks
-import type { ChatThreadSummary } from '@/hooks/use-chat-threads';
-
 // Libraries
 import type { User } from '@/lib/domain/user';
 import { renderInlineMarkdownBold } from '@/lib/markdown/render-inline-markdown-bold';
 
 import { AssistantChatComposer } from './assistant-chat-composer';
 import { AssistantChatMessageList } from './assistant-chat-message-list';
-import { AssistantThreadMenu } from './assistant-thread-menu';
 
 type ChatMessage = {
   id: string;
@@ -36,12 +32,6 @@ type AssistantChatPopupProps = {
   input: string;
   setInput: (value: string) => void;
   onSubmit: (event: React.FormEvent) => void | Promise<void>;
-  threads: ChatThreadSummary[];
-  activeThreadId: string | null;
-  threadsLoading: boolean;
-  onSelectThread: (id: string) => void;
-  onNewThread: () => void;
-  onDeleteThread: (id: string) => void;
 };
 
 const MIN_SCALE = 0.85;
@@ -56,8 +46,8 @@ const ADMIN_CHAT_SUGGESTIONS = [
     prompt: 'I want to invite a new user with the email john.doe@company.com',
   },
   {
-    label: 'Update profile',
-    prompt: 'Update bio for john.doe@company.com to Senior frontend engineer',
+    label: 'Update user info',
+    prompt: 'Update name for john.doe@company.com to John Doe',
   },
   {
     label: 'Deactivate user',
@@ -92,12 +82,6 @@ export const AssistantChatPopup = ({
   input,
   setInput,
   onSubmit,
-  threads,
-  activeThreadId,
-  threadsLoading,
-  onSelectThread,
-  onNewThread,
-  onDeleteThread,
 }: AssistantChatPopupProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const [scale, setScale] = useState(1);
@@ -172,16 +156,6 @@ export const AssistantChatPopup = ({
                   {title}
                 </h2>
               </div>
-
-              <AssistantThreadMenu
-                threads={threads}
-                activeThreadId={activeThreadId}
-                loading={threadsLoading}
-                busy={busy}
-                onSelect={onSelectThread}
-                onNew={onNewThread}
-                onDelete={onDeleteThread}
-              />
 
               <div className="flex min-w-0 w-full flex-wrap items-center justify-between gap-x-3 gap-y-2">
                 <label className="flex shrink-0 items-center gap-1.5 text-xs text-[var(--dash-muted)]">

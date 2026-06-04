@@ -171,16 +171,6 @@ export const DASHBOARD_MESSAGES = {
   MEMBER_PROFILE_UPDATED_SUCCESS_LINE: "Your profile has been saved.",
   /** Assistant tool panel when several directory rows share a display name for the same mutation. */
   DIRECTORY_DUPLICATE_NAME_PANEL_BADGE: "Same name · multiple accounts",
-  /** Conversation (thread) management UI. */
-  THREADS_MENU_TITLE: "Conversations",
-  THREADS_NEW_CHAT: "New chat",
-  THREADS_NEW_CHAT_ARIA: "Start a new conversation",
-  THREADS_EMPTY: "No saved conversations yet.",
-  THREADS_LOADING: "Loading conversations…",
-  THREADS_DELETE_ARIA: "Delete conversation",
-  THREADS_OPEN_ARIA: "Open conversations",
-  THREADS_UNTITLED: "New chat",
-  THREADS_FAILED_LOAD: "Failed to load conversations.",
 } as const;
 
 /** User profile drawer and field labels. */
